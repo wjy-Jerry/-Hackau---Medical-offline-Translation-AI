@@ -4,8 +4,8 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
-- Latest successful application commit: `2a8c6588db89d46349274a2027b6bbf595b71330`
-- Current phase: Phase 1, Russian support; Phase 0 verification is complete.
+- Latest successful application commit before this checkpoint update: `b5986bd58e936a22a9a75d5f253819ba3aeed012`
+- Current phase: Phase 1, Russian support; Russian ASR and translation subphases are complete after this checkpoint commit.
 
 ## Completed tasks
 
@@ -13,10 +13,13 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
 - Phase 0: an actual locally generated English WAV passed through `/process_audio` to Chinese text, patient-stated allergy extraction, and a local audio URL. No cloud service was used for inference.
 - Local Whisper base, EN/ZH Argos packages, and EN/ZH Piper voices are present in Git-ignored `models_local/`.
+- Russian ASR uses that same multilingual Whisper base model. Six distinct locally synthesized Russian utterances were recognized; some words were misspelled or inflected differently, so native review is still required.
+- Official Argos `ru→en` and `en→ru` packages are locally installed. `ru↔zh` uses an English pivot. The Russian Argos packages' Stanza resource metadata is incompatible with the installed Stanza version; their short utterances use local punctuation splitting instead. Relevant RU translation tests and existing pipeline regressions passed. All four Argos packages remain Git ignored.
+- The Russian Piper `ru_RU-irina-medium` voice files are downloaded locally and load successfully, but the public TTS adapter has not yet been extended or tested for Russian.
 
 ## Unfinished task and exact next action
 
-Begin Phase 1 with Russian ASR. The existing multilingual Whisper base model is present, so first add `ru` to the accepted language configuration without downloading another ASR model. Create Russian spoken fixtures from a local Russian voice once available, or use a real independent Russian audio sample; test several distinct phrases and record the actual recognition output. Then proceed in order to Russian ↔ English Argos translation, Russian Piper TTS, provisional question phrases, a human-review test set, UI selection, and integration. Keep EN/ZH working and commit/push each stable subphase before downloads or larger integration work.
+Extend the existing Piper TTS adapter for the already downloaded `ru_RU-irina-medium` voice and verify a local WAV with nonzero frames. Then add provisional Russian emergency questions, a structured native-speaker review set, UI selection, and integration in that order. Keep EN/ZH working and commit/push each stable subphase before larger integration work.
 
 ## Continue commands (PowerShell)
 
@@ -40,7 +43,10 @@ Do not rerun the baseline tests above unless subsequent changes require them. Do
 
 ## Known errors and blockers
 
-- Russian functionality is not yet implemented or validated. Russian medical wording will require native-speaker review.
+- The public API still advertises EN/ZH only; Russian UI and end-to-end API support remain unfinished.
+- Russian ASR testing so far used synthetic Piper speech, not a native speaker recording. Native-speaker quality validation remains pending.
+- EN→RU model translated “Are you bleeding?” as wording closer to “Do you have blood?” in one check. Use provisional reviewed phrase-pack wording for Quick Questions and flag free-response Russian for human confirmation.
+- RU→ZH pivot produced repeated wording for one bleeding phrase. Treat RU↔ZH as experimental until native-speaker review.
 - Git's global URL rewrite breaks GitHub access in this environment; use `$env:GIT_CONFIG_GLOBAL='NUL'` for all Git commands.
 - Git author identity is not configured in this environment. For a commit, use the prior commit identity as one-command options: `-c user.name='Jerry Wang' -c user.email='72400309@cityu-dg.edu.cn'`.
 - Two optional real-ASR fixture tests were skipped because `FIELDTALK_ASR_TEST_AUDIO_DIR` was not set. The separate real EN/ZH pipeline request passed.

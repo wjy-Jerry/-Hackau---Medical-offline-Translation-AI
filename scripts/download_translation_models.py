@@ -1,4 +1,4 @@
-"""Online setup for the English/Chinese Argos packages only."""
+"""One-time online setup for English, Chinese, and Russian Argos packages."""
 from backend.config import TRANSLATION_DIR
 
 
@@ -7,7 +7,7 @@ def main():
 
     TRANSLATION_DIR.mkdir(parents=True, exist_ok=True)
     installed = {(p.from_code, p.to_code) for p in package.get_installed_packages()}
-    required = {("en", "zh"), ("zh", "en")}
+    required = {("en", "zh"), ("zh", "en"), ("en", "ru"), ("ru", "en")}
     if required <= installed:
         print(f"Translation packages already present at {TRANSLATION_DIR}")
         return
@@ -23,7 +23,7 @@ def main():
     present = {(p.from_code, p.to_code) for p in package.get_installed_packages()}
     if not required <= present:
         raise RuntimeError("English/Chinese translation packages were not installed successfully.")
-    print("Local translation packages are ready.")
+    print("Local English, Chinese, and Russian translation packages are ready.")
 
 
 if __name__ == "__main__":
