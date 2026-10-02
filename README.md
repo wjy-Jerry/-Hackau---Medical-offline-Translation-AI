@@ -4,7 +4,7 @@ FieldTalk is a 48-hour hackathon prototype for offline speech translation betwee
 
 ## Current scope
 
-English ↔ Chinese speech translation. The first milestone is microphone → speech recognition → translation → speech synthesis → playback. Quick questions, Russian, medical NLP, and other modes are future work.
+English ↔ Chinese speech translation. The current flow is microphone → speech recognition → translation and limited information highlighting → speech synthesis → playback. Quick questions, Russian, and other modes are future work.
 
 ## Architecture and stable interfaces
 
@@ -13,7 +13,7 @@ React/Vite microphone + result page
                 ↓ multipart POST /process_audio
 FastAPI orchestrator (backend/main.py)
                 ↓
-ASR → Translation (+ empty NLP hook) → TTS
+ASR → Translation (+ patient-stated information) → TTS
                 ↓
 JSON result + local /audio/{id}.wav → browser playback
 ```
@@ -27,7 +27,7 @@ Keep these public interfaces and response keys stable when replacing a model:
 | TTS | `text_to_speech(text, language)` | Path to a local WAV file |
 | API | `POST /process_audio` multipart fields `audio`, `source_language`, `target_language` | `{original_text, translation, confidence, key_information, audio_url, warning, timings_ms, mode}` |
 
-Language codes are `en` and `zh`. Confidence is `null` when the ASR model has no calibrated utterance confidence. The current emergency NLP hook returns `{}`. Do not infer an allergy, symptom, or confidence value from model output without a reviewed method.
+Language codes are `en` and `zh`. Confidence is `null` when the ASR model has no calibrated utterance confidence. The information extractor only highlights explicit words in the source transcript. It does not diagnose, recommend medication or treatment, or make decisions.
 
 ## Repository structure
 
@@ -67,7 +67,7 @@ cd frontend
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. Choose English → Chinese, record a short phrase, and stop. Recognition uses local faster-whisper, translation uses local Argos Translate, and speech uses local Piper voices. The page shows both texts and plays the translated speech. If speech generation fails, the texts remain visible with a warning.
+Open `http://127.0.0.1:5173`. Choose English → Chinese, record a short phrase, and stop. Recognition uses local faster-whisper, translation uses local Argos Translate, and speech uses local Piper voices. The page shows both texts, highlights any supported information explicitly stated by the patient, and plays the translated speech. If speech generation fails, the texts remain visible with a warning.
 
 ## Local ASR model (internet needed once)
 
@@ -90,6 +90,16 @@ The [faster-whisper project](https://github.com/SYSTRAN/faster-whisper) document
 ```
 
 This installs direct Argos Translate English → Chinese and Chinese → English packages under `models_local/argos`. Both model directories are Git ignored. Translation runs from those local packages after setup; the adapter disables Stanza's runtime resource update check. The packages together occupy about 166 MiB on disk; Argos Translate also installs sizable Python dependencies. The first request for each direction loads its model and may take several seconds. Subsequent short requests are faster. Translation can alter medical nuance, so confirm critical wording with the patient.
+
+## Patient-stated information highlighting
+
+`translate_and_extract(text, source_language, target_language)` still returns `translation` and `key_information`. The extractor reads the **source transcript** and recognizes a short English/Chinese phrase list for allergies, medication being taken, pain location, breathing difficulty, bleeding, and reported fainting or loss of consciousness. Pain location uses the `symptom` key to match the existing example:
+
+```json
+{"allergy": "Penicillin", "symptom": "Chest pain"}
+```
+
+That object comes from “I am allergic to penicillin and my chest hurts.” Unsupported, negated, hypothetical, question, or other-person statements yield `{}` unless a separate supported patient statement is present. The rules run locally with no extra model or cloud API. They can miss wording or be wrong when ASR mishears a phrase; the original transcript remains visible for confirmation. These fields are communication highlights only, not diagnoses or medical instructions.
 
 ## Local TTS voices (internet needed once)
 
@@ -132,6 +142,6 @@ All three runtime models are local. The voice and translation model files are ig
 
 ## Error handling and limitations
 
-The UI reports microphone permission, empty recording, backend errors, and model failures. The API rejects unsupported pairs and empty/oversized audio. ASR returns `confidence: null`; Whisper's segment statistics are not a calibrated utterance confidence, so no confidence warning is generated. English test sentences were recognized, but some synthetic Chinese medical phrases were misrecognized; critical terms require human confirmation. Argos may paraphrase or distort symptoms and is not medically validated. If TTS fails, `/process_audio` returns the recognized and translated text with `audio_url: ""` and a warning; the frontend leaves the text visible. Physical-microphone accuracy and a network-disabled device run remain unverified. Generated WAV files remain on disk until manually removed. The backend is intended for a single local demo user.
+The UI reports microphone permission, empty recording, backend errors, and model failures. The API rejects unsupported pairs and empty/oversized audio. ASR returns `confidence: null`; Whisper's segment statistics are not a calibrated utterance confidence, so no confidence warning is generated. English test sentences were recognized, but some synthetic Chinese medical phrases were misrecognized; critical terms require human confirmation. Argos may paraphrase or distort symptoms and is not medically validated. The limited information extractor can miss synonyms, negation, or the patient being discussed; verify highlighted details against the transcript. If TTS fails, `/process_audio` returns the recognized and translated text with `audio_url: ""` and a warning; the frontend leaves the text visible. Physical-microphone accuracy and a network-disabled device run remain unverified. Generated WAV files remain on disk until manually removed. The backend is intended for a single local demo user.
 
 Team members can work within `backend/models/asr.py`, `translation.py`, `tts.py`, `emergency_nlp.py`, or `frontend/` independently. Keep the tabled function signatures, language codes, and API response keys stable; coordinate any needed contract change before merging branches.

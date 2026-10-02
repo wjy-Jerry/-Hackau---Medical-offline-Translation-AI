@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './style.css'
 
 const labels = { en: 'English', zh: 'Chinese' }
+const informationLabels = {
+  allergy: 'Allergy',
+  medication: 'Medication',
+  symptom: 'Pain location',
+  breathing_difficulty: 'Breathing difficulty',
+  bleeding: 'Bleeding',
+  loss_of_consciousness: 'Loss of consciousness',
+}
 
 function App() {
   const [source, setSource] = useState('en')
@@ -133,6 +141,12 @@ function App() {
     {result && <section aria-label="Translation result">
       <h2>Original</h2><p>{result.original_text}</p>
       <h2>Translation</h2><p>{result.translation}</p>
+      {Object.keys(result.key_information || {}).length > 0 && <div>
+        <h2>Patient-stated information</h2>
+        <ul>{Object.entries(result.key_information).map(([key, value]) =>
+          <li key={key}><strong>{informationLabels[key] || key}:</strong> {value}</li>)}</ul>
+        <p>Confirm these words with the patient.</p>
+      </div>}
       <p>Confidence: {result.confidence == null ? 'Unavailable' : `${Math.round(result.confidence * 100)}%`}</p>
       {result.warning && <p className="error">{result.warning}</p>}
       {result.audio_url && <audio ref={player} src={result.audio_url} controls preload="auto"

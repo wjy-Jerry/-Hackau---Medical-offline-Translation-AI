@@ -29,32 +29,33 @@ def test_asr_reports_missing_local_model(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("source", "expected"),
+    ("source", "expected", "key_information"),
     [
-        ("I am allergic to penicillin.", "青霉素"),
-        ("My chest hurts.", "胸"),
-        ("I cannot breathe normally.", "呼吸"),
-        ("I am taking medication for asthma.", "哮喘"),
+        ("I am allergic to penicillin.", "青霉素", {"allergy": "Penicillin"}),
+        ("My chest hurts.", "胸", {"symptom": "Chest pain"}),
+        ("I cannot breathe normally.", "呼吸", {"breathing_difficulty": "Difficulty breathing"}),
+        ("I am taking medication for asthma.", "哮喘", {"medication": "Medication for asthma"}),
     ],
 )
-def test_translation_contract(source, expected):
+def test_translation_contract(source, expected, key_information):
     result = translate_and_extract(source, "en", "zh")
     assert expected in result.translation
-    assert result.key_information == {}
+    assert result.key_information == key_information
 
 
 @pytest.mark.parametrize(
-    ("source", "expected"),
+    ("source", "expected", "key_information"),
     [
-        ("我对青霉素过敏。", "penicillin"),
-        ("我的胸口疼。", "chest"),
-        ("我无法正常呼吸。", "breathe"),
-        ("我正在服用治疗哮喘的药物。", "asthma"),
+        ("我对青霉素过敏。", "penicillin", {"allergy": "青霉素"}),
+        ("我的胸口疼。", "chest", {"symptom": "Chest pain"}),
+        ("我无法正常呼吸。", "breathe", {"breathing_difficulty": "Difficulty breathing"}),
+        ("我正在服用治疗哮喘的药物。", "asthma", {"medication": "治疗哮喘的药物"}),
     ],
 )
-def test_reverse_translation_contract(source, expected):
+def test_reverse_translation_contract(source, expected, key_information):
     result = translate_and_extract(source, "zh", "en")
     assert expected in result.translation.lower()
+    assert result.key_information == key_information
 
 
 def test_translation_cold_start_has_no_network():
@@ -97,6 +98,7 @@ def test_real_translation_and_tts_end_to_end(monkeypatch):
     body = response.json()
     assert body["original_text"] == "I am allergic to penicillin."
     assert "青霉素" in body["translation"]
+    assert body["key_information"] == {"allergy": "Penicillin"}
     assert body["confidence"] is None
     assert body["mode"] == "local"
     assert client.get(body["audio_url"]).headers["content-type"] == "audio/wav"
@@ -120,6 +122,7 @@ def test_tts_failure_keeps_translated_text(monkeypatch):
     body = response.json()
     assert body["original_text"] == "My chest hurts."
     assert "胸" in body["translation"]
+    assert body["key_information"] == {"symptom": "Chest pain"}
     assert body["audio_url"] == ""
     assert "Speech unavailable" in body["warning"]
 
