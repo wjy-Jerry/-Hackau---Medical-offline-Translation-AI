@@ -144,6 +144,7 @@ def test_predefined_question_audio(question_id, language, monkeypatch):
     response = client.get(f"/quick_question/{question_id}/audio", params={"target_language": language})
     assert response.status_code == 200, response.text
     assert response.headers["content-type"] == "audio/wav"
+    assert response.headers["cache-control"] == "no-store"
     with wave.open(io.BytesIO(response.content), "rb") as audio:
         assert audio.getnframes() > 0
 

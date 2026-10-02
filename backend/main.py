@@ -139,4 +139,4 @@ def quick_question_audio(question_id: str, target_language: str):
     except Exception as exc:
         logger.exception("Quick question audio failed")
         raise HTTPException(503, "Question audio unavailable. Show the written question.") from exc
-    return FileResponse(path, media_type="audio/wav")
+    return FileResponse(path, media_type="audio/wav", headers={"Cache-Control": "no-store"})

@@ -100,6 +100,7 @@ function QuestionList({ mode, source, onSelect }) {
 function PatientQuestion({ question, target, mode, answer, onAnswer, onAnother }) {
   const audioRef = useRef(null)
   const autoPlayed = useRef(false)
+  const audioRequest = useRef(`${Date.now()}-${Math.random()}`)
   const [audioState, setAudioState] = useState('preparing')
   const [attempt, setAttempt] = useState(0)
 
@@ -137,7 +138,7 @@ function PatientQuestion({ question, target, mode, answer, onAnswer, onAnother }
         <span className={`audio-state ${audioState === 'playing' ? 'is-playing' : ''}`} role="status"><Icon name="sound" size={18} /> {audioMessage}</span></div>
       <p className="patient-question" lang={target === 'zh' ? 'zh' : 'en'}>{question[target]}</p>
       <audio key={`${question.id}-${target}-${attempt}`} ref={audioRef}
-        src={`/quick_question/${question.id}/audio?target_language=${target}&attempt=${attempt}`}
+        src={`/quick_question/${question.id}/audio?target_language=${target}&request=${audioRequest.current}-${attempt}`}
         preload="auto" onCanPlay={() => { if (!autoPlayed.current) { autoPlayed.current = true; void playQuestion() } }}
         onPlay={() => setAudioState('playing')} onEnded={() => setAudioState('ready')}
         onError={() => setAudioState('unavailable')} />
