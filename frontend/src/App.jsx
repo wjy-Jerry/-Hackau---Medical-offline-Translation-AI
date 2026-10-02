@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import questions from '../../data/emergency_questions.json'
 
-const languages = { en: 'English', zh: 'Chinese' }
-const answerLabels = { en: { yes: 'YES', no: 'NO' }, zh: { yes: '是', no: '不是' } }
+const languages = { en: 'English', zh: 'Chinese', ru: 'Russian' }
+const answerLabels = {
+  en: { yes: 'YES', no: 'NO' },
+  zh: { yes: '是', no: '不是' },
+  ru: { yes: 'ДА', no: 'НЕТ' },
+}
 const informationLabels = {
   allergy: 'Allergy', medication: 'Medication', symptom: 'Pain location',
   breathing_difficulty: 'Breathing difficulty', bleeding: 'Bleeding',
@@ -66,13 +70,13 @@ function Home({ source, target, setSource, setTarget, health, openMode }) {
         <div className="language-field"><label htmlFor="responder-language">RESPONDER LANGUAGE</label>
           <select id="responder-language" value={source} onChange={(event) => {
             const next = event.target.value; setSource(next)
-            if (next === target) setTarget(next === 'en' ? 'zh' : 'en')
+            if (next === target) setTarget(source)
           }}>{Object.entries(languages).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></div>
         <button className="swap-button" type="button" aria-label="Swap languages" onClick={() => { setSource(target); setTarget(source) }}><Icon name="swap" /></button>
         <div className="language-field"><label htmlFor="patient-language">PATIENT LANGUAGE</label>
           <select id="patient-language" value={target} onChange={(event) => {
             const next = event.target.value; setTarget(next)
-            if (next === source) setSource(next === 'en' ? 'zh' : 'en')
+            if (next === source) setSource(target)
           }}>{Object.entries(languages).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></div>
       </section>
       <section className="mode-section" aria-label="Communication modes">
@@ -84,6 +88,7 @@ function Home({ source, target, setSource, setTarget, health, openMode }) {
         </div>
       </section>
       <p className="scope-note"><Icon name="info" size={18} /> For responsive patients. Confirm important details with the patient.</p>
+      {(source === 'ru' || target === 'ru') && <p className="review-note"><Icon name="info" size={18} /> Russian wording is pending native-speaker validation.</p>}
     </main>
   </>
 }
@@ -97,7 +102,7 @@ function QuestionList({ mode, source, onSelect }) {
     </button>)}</div>
 }
 
-function PatientQuestion({ question, target, mode, answer, onAnswer, onAnother }) {
+function PatientQuestion({ question, source, target, mode, answer, onAnswer, onAnother }) {
   const audioRef = useRef(null)
   const autoPlayed = useRef(false)
   const audioRequest = useRef(`${Date.now()}-${Math.random()}`)
@@ -136,7 +141,8 @@ function PatientQuestion({ question, target, mode, answer, onAnswer, onAnother }
     <div className="patient-card">
       <div className="patient-card-top"><span className="eyebrow">SHOW TO PATIENT · {languages[target].toUpperCase()}</span>
         <span className={`audio-state ${audioState === 'playing' ? 'is-playing' : ''}`} role="status"><Icon name="sound" size={18} /> {audioMessage}</span></div>
-      <p className="patient-question" lang={target === 'zh' ? 'zh' : 'en'}>{question[target]}</p>
+      <p className="patient-question" lang={target}>{question[target]}</p>
+      {target === 'ru' && <p className="review-note"><Icon name="info" size={18} /> Russian wording pending native-speaker validation.</p>}
       <audio key={`${question.id}-${target}-${attempt}`} ref={audioRef}
         src={`/quick_question/${question.id}/audio?target_language=${target}&request=${audioRequest.current}-${attempt}`}
         preload="auto" onCanPlay={() => { if (!autoPlayed.current) { autoPlayed.current = true; void playQuestion() } }}
@@ -153,8 +159,8 @@ function PatientQuestion({ question, target, mode, answer, onAnswer, onAnother }
       <div className="answer-grid">{(['yes', 'no']).map((choice) => <button key={choice} type="button"
         className={`answer-button ${answer === choice ? 'is-selected' : ''}`} onClick={() => onAnswer(choice)}
         aria-pressed={answer === choice}>
-        <span lang={target === 'zh' ? 'zh' : 'en'}>{answerLabels[target][choice]}</span>
-        <small>{answerLabels[target === 'en' ? 'zh' : 'en'][choice]}</small>
+        <span lang={target}>{answerLabels[target][choice]}</span>
+        <small lang={source}>{answerLabels[source][choice]}</small>
       </button>)}</div>
       {answer && <p className="answer-confirmation" role="status"><Icon name="check" size={18} /> {answer.toUpperCase()} selected on this screen.</p>}
     </div>}
@@ -173,8 +179,9 @@ function QuestionsMode({ mode, source, target, health, onHome }) {
         <div className="mode-intro"><p className="eyebrow">{mode === 'quick' ? 'CRITICAL QUESTIONS' : 'ONE QUESTION AT A TIME'}</p>
           <h1>{mode === 'quick' ? 'Choose a question.' : 'Choose a yes / no question.'}</h1>
           <p>Tap once to show the {languages[target]} question to the patient and play it aloud.</p></div>
+        {(source === 'ru' || target === 'ru') && <p className="review-note"><Icon name="info" size={18} /> Russian wording pending native-speaker validation.</p>}
         <QuestionList mode={mode} source={source} onSelect={(question) => { setSelected(question); setAnswer(null) }} />
-      </> : <PatientQuestion key={selected.id} question={selected} target={target} mode={mode} answer={answer}
+      </> : <PatientQuestion key={selected.id} question={selected} source={source} target={target} mode={mode} answer={answer}
         onAnswer={setAnswer} onAnother={() => { setSelected(null); setAnswer(null) }} />}
     </main>
   </>
@@ -307,6 +314,7 @@ function Conversation({ source, target, health, onHome }) {
     <main className="conversation-main">
       <div className="mode-intro"><p className="eyebrow">SPEECH-TO-SPEECH</p><h1>Speak, then show the result.</h1>
         <p>{languages[source]} to {languages[target]} · Audio stays on this device.</p></div>
+      {(source === 'ru' || target === 'ru') && <p className="review-note"><Icon name="info" size={18} /> Russian wording pending native-speaker validation. Confirm critical details with the patient.</p>}
       {!result && <div className="record-panel">
         <button className={`mic-button ${recording ? 'is-listening' : ''}`} type="button"
           aria-label={recording ? 'Finish recording' : 'Hold to speak or tap to start recording'}
@@ -325,7 +333,7 @@ function Conversation({ source, target, health, onHome }) {
       {result && <div className="result-stack" aria-label="Translation result">
         <div className="result-card original-card"><p className="eyebrow">ORIGINAL · {languages[source].toUpperCase()}</p><p className="result-text">{result.original_text}</p></div>
         <div className="result-card translation-card"><p className="eyebrow">TRANSLATION · {languages[target].toUpperCase()}</p>
-          <p className="result-text translation-text" lang={target === 'zh' ? 'zh' : 'en'}>{result.translation}</p></div>
+          <p className="result-text translation-text" lang={target}>{result.translation}</p></div>
         {Object.keys(result.key_information || {}).length > 0 && <div className="information-card">
           <p className="eyebrow">IMPORTANT INFORMATION · PATIENT-STATED</p>
           <ul>{Object.entries(result.key_information).map(([key, value]) =>

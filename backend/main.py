@@ -39,7 +39,7 @@ def health():
         piper_available = False
     components = {
         "asr": "ready" if (ASR_DIR / "model.bin").is_file() else "missing",
-        "translation": "ready" if {("en", "zh"), ("zh", "en")} <= installed else "missing",
+        "translation": "ready" if {("en", "zh"), ("zh", "en"), ("en", "ru"), ("ru", "en")} <= installed else "missing",
         "tts": "ready" if piper_available and all(
             (VOICES_DIR / f"{name}.onnx").is_file() and (VOICES_DIR / f"{name}.onnx.json").is_file()
             for name in VOICES.values()
@@ -55,7 +55,7 @@ async def process_audio(
     target_language: str = Form(...),
 ):
     if source_language not in LANGUAGES or target_language not in LANGUAGES or source_language == target_language:
-        raise HTTPException(400, "Unsupported language pair. Select English and Chinese in opposite directions.")
+        raise HTTPException(400, "Unsupported language pair. Select two different available languages.")
     suffix = Path(audio.filename or "").suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
         raise HTTPException(400, "Unsupported audio format. Record WebM or upload WAV, OGG, MP4, or M4A.")

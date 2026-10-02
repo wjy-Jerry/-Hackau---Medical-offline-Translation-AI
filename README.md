@@ -4,7 +4,7 @@ FieldTalk is a 48-hour hackathon prototype for offline speech translation betwee
 
 ## Current scope
 
-English ↔ Chinese emergency communication is currently available in the interface. The interface provides Quick Questions, Yes / No, and Free Conversation. Local Russian models are installed, but Russian is not yet enabled in the API and language selector at this stage.
+English ↔ Chinese, Russian ↔ English, and Russian ↔ Chinese emergency communication is available in the same interface. Russian ↔ Chinese uses English as a local translation pivot and needs extra human review. The interface provides Quick Questions, Yes / No, and Free Conversation.
 
 Russian support is being added on the fallback branch. The seven Russian Quick Question phrases in `data/emergency_questions.json` are **pending native-speaker validation**. `data/russian_review_set.json` stores actual outputs from synthetic local Russian speech for a teammate to rate as correct and natural, understandable but awkward, incorrect, or potentially dangerous meaning change. All human-review fields are intentionally empty. Synthetic speech and machine translation do not establish patient-facing language quality.
 
@@ -33,7 +33,7 @@ Keep these public interfaces and response keys stable when replacing a model:
 | API | `POST /process_audio` multipart fields `audio`, `source_language`, `target_language` | `{original_text, translation, confidence, key_information, audio_url, warning, timings_ms, mode}` |
 | Quick-question audio | `GET /quick_question/{id}/audio?target_language=en\|zh` | Local WAV for one predefined prompt |
 
-Language codes are `en` and `zh`. Confidence is `null` when the ASR model has no calibrated utterance confidence. The information extractor only highlights explicit words in the source transcript. It does not diagnose, recommend medication or treatment, or make decisions.
+Language codes are `en`, `zh`, and `ru`. Confidence is `null` when the ASR model has no calibrated utterance confidence. The information extractor currently highlights only explicit English or Chinese source phrases; Russian source highlights may be empty. It does not diagnose, recommend medication or treatment, or make decisions.
 
 ## Repository structure
 
@@ -44,7 +44,7 @@ frontend/                React/Vite home, question, yes/no, and conversation vie
 data/                    Shared bilingual question list used by frontend and backend
 scripts/download_asr_model.py  One-time ASR model setup
 scripts/download_translation_models.py  One-time translation model setup
-scripts/download_tts_voices.py  One-time English/Chinese voice setup
+scripts/download_tts_voices.py  One-time English/Chinese/Russian voice setup
 tests/                   API contract and optional real-ASR audio tests
 models_local/             Downloaded ASR, translation, and voice models (Git ignored)
 generated_audio/          Synthesized WAV files (Git ignored)
@@ -95,7 +95,7 @@ The [faster-whisper project](https://github.com/SYSTRAN/faster-whisper) document
 .\.venv\Scripts\python.exe -m scripts.download_translation_models
 ```
 
-This installs direct Argos Translate English → Chinese and Chinese → English packages under `models_local/argos`. Both model directories are Git ignored. Translation runs from those local packages after setup; the adapter disables Stanza's runtime resource update check. The packages together occupy about 166 MiB on disk; Argos Translate also installs sizable Python dependencies. The first request for each direction loads its model and may take several seconds. Subsequent short requests are faster. Translation can alter medical nuance, so confirm critical wording with the patient.
+This installs Argos Translate English ↔ Chinese and English ↔ Russian packages under `models_local/argos`. Model directories are Git ignored. Russian ↔ Chinese runs through English locally. The adapter disables Stanza's runtime resource update check; the Russian packages use local punctuation splitting because their bundled Stanza metadata is incompatible with the installed version. The first request for each direction loads its model and may take several seconds. Subsequent short requests are faster. Translation can alter medical nuance, so confirm critical wording with the patient.
 
 ## Patient-stated information highlighting
 
@@ -114,7 +114,7 @@ That object comes from “I am allergic to penicillin and my chest hurts.” Uns
 .\.venv\Scripts\python.exe -m scripts.download_tts_voices
 ```
 
-The script installs `en_US-lessac-medium` and `zh_CN-huayan-medium` under `models_local/voices`. Each ONNX voice is about 60 MiB. [Piper's Python API](https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/API_PYTHON.md) runs synthesis locally; FieldTalk caches each loaded voice and saves a WAV file under `generated_audio/`. The first synthesis for each language includes voice loading. No cloud speech API is called.
+The script installs `en_US-lessac-medium`, `zh_CN-huayan-medium`, and `ru_RU-irina-medium` under `models_local/voices`. [Piper's Python API](https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/API_PYTHON.md) runs synthesis locally; FieldTalk caches each loaded voice and saves a WAV file under `generated_audio/`. The first synthesis for each language includes voice loading. No cloud speech API is called.
 
 Start the backend:
 

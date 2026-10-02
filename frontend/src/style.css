@@ -51,6 +51,8 @@ h1, h2, p { overflow-wrap: anywhere; }
 .featured .mode-copy span { color: #d5e3eb; }
 .mode-arrow { align-self: flex-end; margin-top: auto; }
 .scope-note { margin: 29px 0 0; color: #637a89; font-size: 13px; display: flex; align-items: center; gap: 9px; }
+.review-note { margin: 12px 0; color: #526b7d; font-size: 13px; line-height: 1.45; display: flex; align-items: flex-start; gap: 9px; }
+.review-note svg { flex: none; }
 
 .mode-main, .conversation-main { max-width: 1000px; margin: 0 auto; }
 .mode-intro { padding: 62px 0 28px; }

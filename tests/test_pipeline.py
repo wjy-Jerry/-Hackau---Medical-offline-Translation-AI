@@ -109,6 +109,31 @@ def test_real_translation_and_tts_end_to_end(monkeypatch):
     assert client.get(body["audio_url"]).headers["content-type"] == "audio/wav"
 
 
+@pytest.mark.parametrize(("source", "target", "spoken_text", "expected"), [
+    ("ru", "en", "У меня болит грудь.", "chest"),
+    ("en", "ru", "My chest hurts.", "грудь"),
+    ("ru", "zh", "У меня аллергия на пенициллин.", "青霉素"),
+    ("zh", "ru", "我对青霉素过敏。", "пенициллин"),
+])
+def test_russian_api_pairs_keep_process_audio_contract(source, target, spoken_text, expected, monkeypatch):
+    monkeypatch.setattr(
+        main, "speech_to_text",
+        lambda audio_path, language: ASRResult(text=spoken_text, language=language, confidence=None),
+    )
+    response = client.post(
+        "/process_audio",
+        data={"source_language": source, "target_language": target},
+        files={"audio": ("sample.wav", b"mock audio", "audio/wav")},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert expected in body["translation"].lower()
+    assert body["original_text"] == spoken_text
+    assert body["mode"] == "local"
+    assert body["audio_url"].startswith("/audio/")
+    assert client.get(body["audio_url"]).headers["content-type"] == "audio/wav"
+
+
 def test_tts_failure_keeps_translated_text(monkeypatch):
     monkeypatch.setattr(
         main,
@@ -142,7 +167,7 @@ def test_rejects_unsupported_pair():
 
 
 @pytest.mark.parametrize("question_id", ["pain", "breathing", "allergy", "medication", "consciousness", "bleeding", "chest_pain"])
-@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("language", ["en", "zh", "ru"])
 def test_predefined_question_audio(question_id, language, monkeypatch):
     monkeypatch.setattr(main, "speech_to_text", lambda *args: pytest.fail("Quick questions must bypass ASR"))
     response = client.get(f"/quick_question/{question_id}/audio", params={"target_language": language})
@@ -155,7 +180,7 @@ def test_predefined_question_audio(question_id, language, monkeypatch):
 
 def test_predefined_question_rejects_unknown_id_and_language():
     assert client.get("/quick_question/unknown/audio", params={"target_language": "en"}).status_code == 404
-    assert client.get("/quick_question/pain/audio", params={"target_language": "ru"}).status_code == 400
+    assert client.get("/quick_question/pain/audio", params={"target_language": "fr"}).status_code == 400
 
 
 def test_predefined_question_audio_failure_keeps_written_prompt_available(monkeypatch):
