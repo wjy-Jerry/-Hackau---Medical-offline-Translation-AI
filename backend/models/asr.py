@@ -4,7 +4,7 @@ import time
 from functools import lru_cache
 from pathlib import Path
 
-from backend.config import ASR_DIR, LANGUAGES
+from backend.config import ASR_DIR, ASR_LANGUAGES
 from backend.schemas import ASRResult
 
 logger = logging.getLogger("fieldtalk.asr")
@@ -32,7 +32,7 @@ def speech_to_text(audio_path: str | Path, language: str | None = None) -> ASRRe
     path = Path(audio_path)
     if not path.is_file() or path.stat().st_size == 0:
         raise ValueError("No audio recorded. Please record again.")
-    if language is not None and language not in LANGUAGES:
+    if language is not None and language not in ASR_LANGUAGES:
         raise ValueError(f"Unsupported ASR language: {language}.")
     try:
         model = _model()
