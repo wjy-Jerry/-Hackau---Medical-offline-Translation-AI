@@ -1,4 +1,5 @@
 """Local-only API orchestrating the stable model adapters."""
+import json
 import logging
 import tempfile
 import time
@@ -8,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from backend.config import ASR_DIR, AUDIO_DIR, LANGUAGES, MODE, VOICES, VOICES_DIR
+from backend.config import ASR_DIR, AUDIO_DIR, LANGUAGES, MODE, ROOT, VOICES, VOICES_DIR
 from backend.models.asr import ModelUnavailable, speech_to_text
 from backend.models.translation import translate_and_extract
 from backend.models.tts import text_to_speech
@@ -18,6 +19,10 @@ logger = logging.getLogger("fieldtalk")
 app = FastAPI(title="FieldTalk local API")
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
 ALLOWED_SUFFIXES = {".webm", ".wav", ".ogg", ".mp4", ".m4a"}
+QUESTIONS = {
+    question["id"]: question
+    for question in json.loads((ROOT / "data" / "emergency_questions.json").read_text(encoding="utf-8"))
+}
 
 
 @app.get("/health")
@@ -118,4 +123,20 @@ def get_audio(filename: str):
     path = AUDIO_DIR / filename
     if not path.is_file():
         raise HTTPException(404, "Audio not found.")
+    return FileResponse(path, media_type="audio/wav")
+
+
+@app.get("/quick_question/{question_id}/audio")
+def quick_question_audio(question_id: str, target_language: str):
+    """Speak a reviewed prompt without passing it through ASR or translation."""
+    question = QUESTIONS.get(question_id)
+    if question is None:
+        raise HTTPException(404, "Question not found.")
+    if target_language not in LANGUAGES:
+        raise HTTPException(400, "Unsupported patient language.")
+    try:
+        path = text_to_speech(question[target_language], target_language)
+    except Exception as exc:
+        logger.exception("Quick question audio failed")
+        raise HTTPException(503, "Question audio unavailable. Show the written question.") from exc
     return FileResponse(path, media_type="audio/wav")

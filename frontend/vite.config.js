@@ -4,6 +4,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/process_audio': 'http://127.0.0.1:8000',
+      '/quick_question': 'http://127.0.0.1:8000',
       '/health': 'http://127.0.0.1:8000',
       '/audio': 'http://127.0.0.1:8000',
     },

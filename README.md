@@ -4,18 +4,21 @@ FieldTalk is a 48-hour hackathon prototype for offline speech translation betwee
 
 ## Current scope
 
-English ↔ Chinese speech translation. The current flow is microphone → speech recognition → translation and limited information highlighting → speech synthesis → playback. Quick questions, Russian, and other modes are future work.
+English ↔ Chinese emergency communication. The interface provides Quick Questions, Yes / No, and Free Conversation. Russian is not available until the offline speech and translation models support it.
 
 ## Architecture and stable interfaces
 
 ```text
-React/Vite microphone + result page
+React/Vite responder and patient views
                 ↓ multipart POST /process_audio
 FastAPI orchestrator (backend/main.py)
                 ↓
 ASR → Translation (+ patient-stated information) → TTS
                 ↓
 JSON result + local /audio/{id}.wav → browser playback
+
+Quick Questions / Yes-No → bundled bilingual prompt → GET /quick_question/{id}/audio
+                                              ↓ local Piper voice → browser playback
 ```
 
 Keep these public interfaces and response keys stable when replacing a model:
@@ -26,6 +29,7 @@ Keep these public interfaces and response keys stable when replacing a model:
 | Translation | `translate_and_extract(text, source_language, target_language)` | `{translation: str, key_information: object}` |
 | TTS | `text_to_speech(text, language)` | Path to a local WAV file |
 | API | `POST /process_audio` multipart fields `audio`, `source_language`, `target_language` | `{original_text, translation, confidence, key_information, audio_url, warning, timings_ms, mode}` |
+| Quick-question audio | `GET /quick_question/{id}/audio?target_language=en\|zh` | Local WAV for one predefined prompt |
 
 Language codes are `en` and `zh`. Confidence is `null` when the ASR model has no calibrated utterance confidence. The information extractor only highlights explicit words in the source transcript. It does not diagnose, recommend medication or treatment, or make decisions.
 
@@ -34,8 +38,8 @@ Language codes are `en` and `zh`. Confidence is `null` when the ASR model has no
 ```text
 backend/                 FastAPI, contracts, configuration, model adapters
 backend/models/          asr.py, translation.py, tts.py, emergency_nlp.py
-frontend/                One-page React/Vite microphone UI
-data/                    Placeholder quick-question content, not in the UI
+frontend/                React/Vite home, question, yes/no, and conversation views
+data/                    Shared bilingual question list used by frontend and backend
 scripts/download_asr_model.py  One-time ASR model setup
 scripts/download_translation_models.py  One-time translation model setup
 scripts/download_tts_voices.py  One-time English/Chinese voice setup
@@ -67,7 +71,7 @@ cd frontend
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. Choose English → Chinese, record a short phrase, and stop. Recognition uses local faster-whisper, translation uses local Argos Translate, and speech uses local Piper voices. The page shows both texts, highlights any supported information explicitly stated by the patient, and plays the translated speech. If speech generation fails, the texts remain visible with a warning.
+Open `http://127.0.0.1:5173`. Set the responder and patient languages, then choose a mode. Quick Questions and Yes / No display reviewed patient-language prompts immediately from the bundled question file and request only local speech from the backend. Free Conversation records speech for the existing `/process_audio` pipeline. If speech generation fails, the written question or translated text remains visible. Yes / No selections stay on the current screen and are not saved as medical records.
 
 ## Local ASR model (internet needed once)
 

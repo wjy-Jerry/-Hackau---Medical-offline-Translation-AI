@@ -1,4 +1,5 @@
 """API contract tests with local ASR replaced only inside the test."""
+import io
 import subprocess
 import sys
 import wave
@@ -134,3 +135,28 @@ def test_rejects_unsupported_pair():
         files={"audio": ("sample.wav", b"mock audio", "audio/wav")},
     )
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize("question_id", ["pain", "breathing", "allergy", "medication", "consciousness", "bleeding"])
+@pytest.mark.parametrize("language", ["en", "zh"])
+def test_predefined_question_audio(question_id, language, monkeypatch):
+    monkeypatch.setattr(main, "speech_to_text", lambda *args: pytest.fail("Quick questions must bypass ASR"))
+    response = client.get(f"/quick_question/{question_id}/audio", params={"target_language": language})
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "audio/wav"
+    with wave.open(io.BytesIO(response.content), "rb") as audio:
+        assert audio.getnframes() > 0
+
+
+def test_predefined_question_rejects_unknown_id_and_language():
+    assert client.get("/quick_question/unknown/audio", params={"target_language": "en"}).status_code == 404
+    assert client.get("/quick_question/pain/audio", params={"target_language": "ru"}).status_code == 400
+
+
+def test_predefined_question_audio_failure_keeps_written_prompt_available(monkeypatch):
+    def fail_tts(*args):
+        raise RuntimeError("Test voice failure")
+    monkeypatch.setattr(main, "text_to_speech", fail_tts)
+    response = client.get("/quick_question/pain/audio", params={"target_language": "zh"})
+    assert response.status_code == 503
+    assert main.QUESTIONS["pain"]["zh"] == "哪里疼？"
