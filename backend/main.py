@@ -27,15 +27,20 @@ def health():
         installed = {(p.from_code, p.to_code) for p in package.get_installed_packages()}
     except (ImportError, OSError):
         installed = set()
+    try:
+        from piper import PiperVoice  # noqa: F401 - check the runtime dependency
+        piper_available = True
+    except ImportError:
+        piper_available = False
     components = {
         "asr": "ready" if (ASR_DIR / "model.bin").is_file() else "missing",
         "translation": "ready" if {("en", "zh"), ("zh", "en")} <= installed else "missing",
-        "tts": "mock" if MODE == "mock" else "ready" if all(
+        "tts": "ready" if piper_available and all(
             (VOICES_DIR / f"{name}.onnx").is_file() and (VOICES_DIR / f"{name}.onnx.json").is_file()
             for name in VOICES.values()
         ) else "missing",
     }
-    return {"mode": MODE, "ready": all(v in {"ready", "mock"} for v in components.values()), "components": components}
+    return {"mode": MODE, "ready": all(v == "ready" for v in components.values()), "components": components}
 
 
 @app.post("/process_audio", response_model=ProcessResult)
@@ -56,6 +61,8 @@ async def process_audio(
         raise HTTPException(413, "Audio is too large. Keep recordings under 10 MB.")
     started = time.perf_counter()
     timings = {}
+    audio_url = ""
+    audio_warning = None
     with tempfile.TemporaryDirectory(prefix="fieldtalk-") as folder:
         input_path = Path(folder) / f"input{suffix}"
         input_path.write_bytes(data)
@@ -67,7 +74,12 @@ async def process_audio(
             translated = translate_and_extract(recognized.text, source_language, target_language)
             timings["translation"] = round((time.perf_counter() - t0) * 1000, 1)
             t0 = time.perf_counter()
-            output_path = text_to_speech(translated.translation, target_language)
+            try:
+                output_path = text_to_speech(translated.translation, target_language)
+                audio_url = f"/audio/{output_path.name}"
+            except Exception:
+                logger.exception("TTS failed; returning the translated text")
+                audio_warning = "Speech unavailable. Read the translation on screen."
             timings["tts"] = round((time.perf_counter() - t0) * 1000, 1)
         except ModelUnavailable as exc:
             raise HTTPException(503, str(exc)) from exc
@@ -78,16 +90,18 @@ async def process_audio(
             raise HTTPException(500, str(exc)) from exc
     timings["total"] = round((time.perf_counter() - started) * 1000, 1)
     logger.info("Pipeline timing (ms): %s", timings)
-    warning = None
+    warnings = []
     if recognized.confidence is not None and recognized.confidence < 0.6:
-        warning = "Low recognition confidence. Please repeat."
+        warnings.append("Low recognition confidence. Please repeat.")
+    if audio_warning:
+        warnings.append(audio_warning)
     return ProcessResult(
         original_text=recognized.text,
         translation=translated.translation,
         confidence=recognized.confidence,
         key_information=translated.key_information,
-        audio_url=f"/audio/{output_path.name}",
-        warning=warning,
+        audio_url=audio_url,
+        warning=" ".join(warnings) or None,
         timings_ms=timings,
         mode=MODE,
     )

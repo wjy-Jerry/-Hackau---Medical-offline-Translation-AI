@@ -44,7 +44,11 @@ function App() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.detail || 'Processing failed.')
       setResult(data)
-      setTimeout(() => player.current?.play().catch(() => {}), 0)
+      if (data.audio_url) setTimeout(() => player.current?.play().catch((playError) => {
+        setError(playError.name === 'NotAllowedError' ?
+          'Press Play below to hear the translated speech.' :
+          'Audio playback failed. Read the translation above.')
+      }), 0)
     } catch (err) {
       setError(err instanceof TypeError ? 'Backend unavailable. Check the local server.' : err.message)
     } finally {
@@ -131,15 +135,13 @@ function App() {
       <h2>Translation</h2><p>{result.translation}</p>
       <p>Confidence: {result.confidence == null ? 'Unavailable' : `${Math.round(result.confidence * 100)}%`}</p>
       {result.warning && <p className="error">{result.warning}</p>}
-      <audio ref={player} src={result.audio_url} controls preload="auto" />
+      {result.audio_url && <audio ref={player} src={result.audio_url} controls preload="auto"
+        onError={() => setError('Audio playback failed. Read the translation above.')} />}
       <p>Time: {result.timings_ms.total} ms</p>
     </section>}
     <footer>
-      {health?.mode === 'mock' ?
-        health.ready ? 'LOCAL ASR + TRANSLATION READY — audio is mocked' :
-          `LOCAL MODEL MISSING — ${Object.entries(health.components).filter(([, value]) => value === 'missing').map(([name]) => name).join(', ')}` :
-        health?.ready ? 'LOCAL MODE READY — disconnect network to verify' :
-        health ? `LOCAL MODE NOT READY — ${Object.entries(health.components).filter(([, value]) => value !== 'ready').map(([name]) => name).join(', ')} missing` :
+      {health?.ready ? 'LOCAL ASR + TRANSLATION + SPEECH READY' :
+        health ? `LOCAL MODEL MISSING — ${Object.entries(health.components).filter(([, value]) => value !== 'ready').map(([name]) => name).join(', ')}` :
         'Checking local backend…'}
     </footer>
   </main>

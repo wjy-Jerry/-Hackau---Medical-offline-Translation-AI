@@ -1,12 +1,9 @@
 """API contract tests with local ASR replaced only inside the test."""
-import os
 import subprocess
 import sys
 import wave
 
 import pytest
-
-os.environ["FIELDTALK_MODE"] = "mock"
 
 from fastapi.testclient import TestClient
 
@@ -76,14 +73,16 @@ assert 'penicillin' in translate_and_extract('我对青霉素过敏。', 'zh', '
     assert result.returncode == 0, result.stderr
 
 
-def test_tts_contract():
-    path = text_to_speech("我对青霉素过敏。", "zh")
+@pytest.mark.parametrize(("language", "text"), [("en", "My chest hurts."), ("zh", "我对青霉素过敏。")])
+def test_tts_contract(language, text):
+    path = text_to_speech(text, language)
     with wave.open(str(path), "rb") as audio:
         assert audio.getnframes() > 0
+        assert audio.getframerate() > 0
     path.unlink()
 
 
-def test_real_translation_and_mock_tts_end_to_end(monkeypatch):
+def test_real_translation_and_tts_end_to_end(monkeypatch):
     monkeypatch.setattr(
         main,
         "speech_to_text",
@@ -99,8 +98,30 @@ def test_real_translation_and_mock_tts_end_to_end(monkeypatch):
     assert body["original_text"] == "I am allergic to penicillin."
     assert "青霉素" in body["translation"]
     assert body["confidence"] is None
-    assert body["mode"] == "mock"
+    assert body["mode"] == "local"
     assert client.get(body["audio_url"]).headers["content-type"] == "audio/wav"
+
+
+def test_tts_failure_keeps_translated_text(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "speech_to_text",
+        lambda audio_path, language: ASRResult(text="My chest hurts.", language=language, confidence=None),
+    )
+    def fail_tts(text, language):
+        raise RuntimeError("Test voice failure")
+    monkeypatch.setattr(main, "text_to_speech", fail_tts)
+    response = client.post(
+        "/process_audio",
+        data={"source_language": "en", "target_language": "zh"},
+        files={"audio": ("sample.wav", b"mock audio", "audio/wav")},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["original_text"] == "My chest hurts."
+    assert "胸" in body["translation"]
+    assert body["audio_url"] == ""
+    assert "Speech unavailable" in body["warning"]
 
 
 def test_rejects_unsupported_pair():
