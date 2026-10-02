@@ -51,7 +51,7 @@ _LOCATIONS_ZH = {
     "右腿": "Right leg", "腿": "Leg",
 }
 _LOCATION_ZH = "|".join(sorted(_LOCATIONS_ZH, key=len, reverse=True))
-_PAIN_ZH = re.compile(rf"(?P<location>{_LOCATION_ZH})(?:很|非常|有点|有點|有)?(?:疼|痛)")
+_PAIN_ZH = re.compile(rf"(?P<location>{_LOCATION_ZH})(?:很|非常|有点|有點|有|偶)?(?:疼|痛)")
 
 _BREATHING_EN = re.compile(
     r"\b(?:can'?t|cannot|unable to)\s+breathe\b|"

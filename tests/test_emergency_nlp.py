@@ -18,6 +18,7 @@ from backend.models.emergency_nlp import extract_key_information
         ("I fainted.", {"loss_of_consciousness": "Reported fainting or loss of consciousness"}),
         ("我对青霉素过敏，而且胸口疼。", {"allergy": "青霉素", "symptom": "Chest pain"}),
         ("我胸口有疼而且我无法正常呼吸", {"symptom": "Chest pain", "breathing_difficulty": "Difficulty breathing"}),
+        ("我胸口偶疼而且我无法正常呼吸", {"symptom": "Chest pain", "breathing_difficulty": "Difficulty breathing"}),
         ("我正在服用治疗哮喘的药物。", {"medication": "治疗哮喘的药物"}),
         ("我不能呼吸。", {"breathing_difficulty": "Difficulty breathing"}),
         ("我无法正常呼吸。", {"breathing_difficulty": "Difficulty breathing"}),

@@ -4,8 +4,9 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
-- Latest successful application commit before this checkpoint update: `0a67cdbac80f2e7cf732053287c14b3260ff5768`
-- Current phase: Phase 2 final fallback validation; A/B/C real-audio checks and failure-path fixes are complete after this checkpoint commit.
+- Latest successful application commit before final validation: `475d2b975aa0143f7ff3698b76fc9891c0734676`
+- Latest successful commit after resuming: run `& 'C:\Program Files\Git\cmd\git.exe' rev-parse HEAD` (the commit containing this checkpoint is the latest stable milestone).
+- Current phase: Phase 2 technical validation complete. Remaining work requires manual hardware, physical offline, and native-speaker checks.
 
 ## Completed tasks
 
@@ -20,10 +21,14 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - The API now accepts all six different-language pairs among EN/ZH/RU with the same `/process_audio` schema. Quick Question audio accepts Russian. The existing frontend language selector and Yes/No controls include Russian and retain the emergency visual layout. A neutral reminder marks Russian wording as pending native-speaker review. API, phrase, translation, and frontend-build checks passed.
 - Real locally synthesized Russian speech completed RU→EN and RU→ZH `/process_audio` requests with local WAV retrieval. The RU→EN chest-pain sample returned “У меня болит грудь.” → “My chest hurts.” with ASR 761.7 ms, translation 2124.8 ms, TTS 1314.5 ms, total 4202.8 ms. The RU→ZH allergy sample completed in 3016.8 ms total. Actual browser checks at 1200/768/390px showed no horizontal overflow and exercised Quick Questions, Russian Yes/No, and RU→EN Free Conversation recording/result/audio presence.
 - Phase 2 real synthetic-audio samples: EN→ZH allergy plus chest pain returned both `allergy: Penicillin` and `symptom: Chest pain` in 5228.5 ms total. ZH→EN chest pain plus breathing difficulty returned readable English and WAV in 854.5 ms; ASR added an extra `有` before `疼`, initially causing a chest-pain highlight miss. RU→EN chest pain returned readable English and WAV in 779.0 ms. The conservative Chinese pain pattern now handles that observed ASR variant. Emergency information extraction exceptions now leave the translation usable with `{}` highlights. Relevant tests, including empty audio, unsupported languages, ASR/translation/TTS failures, and low-confidence warning simulation, passed.
+- Browser follow-up verified Russian Quick Question audio reached Ready and Repeat advanced actual playback, Yes/No Russian buttons were large and selected correctly, Free Conversation Record Again reset the microphone view, and the backend-unavailable message was clear after a frontend fix. EN→ZH and ZH→EN browser recordings loaded and played translated WAVs. The fake microphone loops source WAVs if held too long, so its duplicate tails are a fixture artifact.
+- Runtime review found no external frontend URLs or download calls in model adapters. Local Whisper, four Argos packages, and three Piper voices are present. A real RU→EN request and Russian Quick Question succeeded while non-loopback Python socket connections were blocked. The combined setup command reported every existing model present and downloaded nothing.
+- Detailed evidence and tomorrow's manual demo steps are in `docs/DEMO_VALIDATION.md`.
+- Final checks after all code changes: `python -m pytest -q` reported 101 passed, 2 skipped, 1 dependency deprecation warning; `npm run build` passed; `git diff --check` found no whitespace errors. The skipped tests need optional manually recorded WAV fixtures.
 
 ## Unfinished task and exact next action
 
-Finish Phase 2: browser Quick Question playback and Repeat, Yes/No selection, Free Conversation record-again, backend unavailable and error displays; inspect runtime for external network dependencies; verify local model files; run final full backend tests and frontend build. Do not claim physical Airplane Mode verification unless the network was actually disabled. Commit/push a final validation report or fixes, then produce the final overnight report with exact startup and demo commands.
+No automated phase remains after the final validation commit. The exact next action for the team is: start the two local servers using the commands below, have the Russian teammate review the seven question phrases and six test records, use a real microphone in the intended setting, and repeat one round trip plus Quick Questions in physical Airplane Mode. Record any errors in a new issue or follow-up commit. Do not change human-review fields without an actual reviewer.
 
 ## Continue commands (PowerShell)
 
@@ -39,7 +44,7 @@ $env:PATH='C:\Users\19573\Documents\Codex\2026-10-02\https-github-com-rrrrrrl-ha
 Push-Location frontend; npm run build; Pop-Location
 ```
 
-Do not rerun the baseline tests above unless subsequent changes require them. Do not redownload the existing models. For a stable subphase, stage only source/checkpoint files, commit, and push with:
+Do not rerun successful tests unless subsequent changes require them. Do not redownload the existing models. For a later stable fix, stage only source/checkpoint files, commit, and push with:
 
 ```powershell
 & 'C:\Program Files\Git\cmd\git.exe' push origin backup/codex-full-stack
@@ -48,9 +53,10 @@ Do not rerun the baseline tests above unless subsequent changes require them. Do
 ## Known errors and blockers
 
 - Russian speech evaluation used Piper synthetic audio only; real native-speaker speech quality has not been measured.
-- Russian ASR testing so far used synthetic Piper speech, not a native speaker recording. Native-speaker quality validation remains pending.
 - EN→RU model translated “Are you bleeding?” as wording closer to “Do you have blood?” in one check. Use provisional reviewed phrase-pack wording for Quick Questions and flag free-response Russian for human confirmation.
 - RU→ZH pivot produced repeated wording for one bleeding phrase. Treat RU↔ZH as experimental until native-speaker review.
+- Chinese synthetic ASR changed “胸口疼” into variants including “胸口有疼” and “胸口偶疼”; the extractor has targeted coverage, but further speech variations can still be missed. The original and translation remain visible for confirmation.
+- Offline architecture was verified with non-loopback socket denial. **Physical Airplane Mode has not been tested.**
 - Git's global URL rewrite breaks GitHub access in this environment; use `$env:GIT_CONFIG_GLOBAL='NUL'` for all Git commands.
 - Git author identity is not configured in this environment. For a commit, use the prior commit identity as one-command options: `-c user.name='Jerry Wang' -c user.email='72400309@cityu-dg.edu.cn'`.
 - Two optional real-ASR fixture tests were skipped because `FIELDTALK_ASR_TEST_AUDIO_DIR` was not set. The separate real EN/ZH pipeline request passed.

@@ -228,8 +228,8 @@ function Conversation({ source, target, health, onHome }) {
     form.append('target_language', target)
     try {
       const response = await fetch('/process_audio', { method: 'POST', body: form })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.detail || 'Could not process the recording.')
+      const data = await response.json().catch(() => { throw new TypeError('Invalid local backend response') })
+      if (!response.ok) throw new Error(data?.detail || 'Could not process the recording.')
       setResult(data)
       setPhase('done')
     } catch (requestError) {

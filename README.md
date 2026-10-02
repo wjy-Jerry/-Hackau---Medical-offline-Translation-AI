@@ -6,9 +6,11 @@ FieldTalk is a 48-hour hackathon prototype for offline speech translation betwee
 
 English ↔ Chinese, Russian ↔ English, and Russian ↔ Chinese emergency communication is available in the same interface. Russian ↔ Chinese uses English as a local translation pivot and needs extra human review. The interface provides Quick Questions, Yes / No, and Free Conversation.
 
-Russian support is being added on the fallback branch. The seven Russian Quick Question phrases in `data/emergency_questions.json` are **pending native-speaker validation**. `data/russian_review_set.json` stores actual outputs from synthetic local Russian speech for a teammate to rate as correct and natural, understandable but awkward, incorrect, or potentially dangerous meaning change. All human-review fields are intentionally empty. Synthetic speech and machine translation do not establish patient-facing language quality.
+Russian support is present on the fallback branch. The seven Russian Quick Question phrases in `data/emergency_questions.json` are **pending native-speaker validation**. `data/russian_review_set.json` stores actual outputs from synthetic local Russian speech for a teammate to rate as correct and natural, understandable but awkward, incorrect, or potentially dangerous meaning change. All human-review fields are intentionally empty. Synthetic speech and machine translation do not establish patient-facing language quality.
 
 On 2026-10-03, locally synthesized Russian speech passed through the real `/process_audio` pipeline to English and Chinese with local playable WAV responses. The Russian → English chest-pain run reported 761.7 ms ASR, 2124.8 ms translation (cold model load), 1314.5 ms TTS, and 4202.8 ms total. A Russian → Chinese allergy run reported 460.7 ms ASR, 1192.8 ms translation, 1361.9 ms TTS, and 3016.8 ms total. These are single-machine technical samples, not human language-quality evaluations. Browser checks covered desktop (1200px), tablet (768px), and mobile (390px), including a Russian → English recorded conversation result.
+
+See [demo validation and tomorrow's walkthrough](docs/DEMO_VALIDATION.md) for actual multilingual results, offline-test limits, failure checks, and the manual demo sequence.
 
 ## Architecture and stable interfaces
 
@@ -136,20 +138,20 @@ cd frontend
 npm run build
 ```
 
-For the real ASR test, record **“I am allergic to penicillin.”**, **“My chest hurts.”**, and **“I cannot breathe normally.”** as three separate WAV files. Set `FIELDTALK_ASR_TEST_AUDIO_DIR` to their directory and name them `allergy.wav`, `chest.wav`, and `breathing.wav`, then run `pytest -q`. The real-ASR test is skipped when the audio directory is unset. In the browser, test both English → Chinese and Chinese → English, and confirm that `Original` and `Translation` change and the translated speech plays. The API reports ASR, translation, TTS, and total timing in milliseconds. Speech accuracy and translation quality depend on voice, noise, and terminology.
+For the real English ASR test, record **“I am allergic to penicillin.”**, **“My chest hurts.”**, and **“I cannot breathe normally.”** as three separate WAV files. Set `FIELDTALK_ASR_TEST_AUDIO_DIR` to their directory and name them `allergy.wav`, `chest.wav`, and `breathing.wav`, then run `pytest -q`. Those real-speaker fixture tests are skipped when the audio directory is unset. The separate Russian ASR test uses local synthetic speech. In the browser, test English → Chinese, Chinese → English, and Russian → English; confirm that `Original` and `Translation` change and translated speech plays. The API reports ASR, translation, TTS, and total timing in milliseconds. Speech accuracy and translation quality depend on voice, noise, and terminology.
 
 ## Verify without internet
 
 1. Finish dependency and model downloads while online.
 2. Start both servers and confirm `/health` reports `{"mode":"local","ready":true,"components":{"asr":"ready","translation":"ready","tts":"ready"}}`.
 3. Disable Wi-Fi and unplug Ethernet or enable Airplane Mode.
-4. Reload `http://127.0.0.1:5173` and run both directions again. The page should still load because Vite and FastAPI are local processes.
+4. Reload `http://127.0.0.1:5173` and run EN→ZH, ZH→EN, and RU→EN again. The page should still load because Vite and FastAPI are local processes.
 5. If you need strict proof of no network calls, monitor the processes with an OS network monitor while recording and processing.
 
 All three runtime models are local. The voice and translation model files are ignored by Git.
 
 ## Error handling and limitations
 
-The UI reports microphone permission, empty recording, backend errors, and model failures. The API rejects unsupported pairs and empty/oversized audio. ASR returns `confidence: null`; Whisper's segment statistics are not a calibrated utterance confidence, so no confidence warning is generated. English test sentences were recognized, but some synthetic Chinese medical phrases were misrecognized; critical terms require human confirmation. Argos may paraphrase or distort symptoms and is not medically validated. The limited information extractor can miss synonyms, negation, or the patient being discussed; verify highlighted details against the transcript. If TTS fails, `/process_audio` returns the recognized and translated text with `audio_url: ""` and a warning; the frontend leaves the text visible. Physical-microphone accuracy and a network-disabled device run remain unverified. Generated WAV files remain on disk until manually removed. The backend is intended for a single local demo user.
+The UI reports microphone permission, empty recording, backend errors, and model failures. The API rejects unsupported pairs and empty/oversized audio. ASR returns `confidence: null`; Whisper's segment statistics are not a calibrated utterance confidence, so no confidence warning is generated by the current model. English test sentences were recognized, but some synthetic Chinese medical phrases were misrecognized; critical terms require human confirmation. Argos may paraphrase or distort symptoms and is not medically validated. Russian ↔ Chinese uses two model steps and one bleeding example repeated the translated wording. The information extractor covers English and Chinese source statements, and may omit or miss information; extraction failure now preserves the translated text with empty highlights. If TTS fails, `/process_audio` returns the recognized and translated text with `audio_url: ""` and a warning; the frontend leaves the text visible. Physical-microphone accuracy and a physical Airplane Mode run remain unverified. Generated WAV files remain on disk until manually removed. The backend is intended for a single local demo user.
 
 Team members can work within `backend/models/asr.py`, `translation.py`, `tts.py`, `emergency_nlp.py`, or `frontend/` independently. Keep the tabled function signatures, language codes, and API response keys stable; coordinate any needed contract change before merging branches.
