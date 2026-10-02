@@ -141,7 +141,7 @@ def test_rejects_unsupported_pair():
     assert response.status_code == 400
 
 
-@pytest.mark.parametrize("question_id", ["pain", "breathing", "allergy", "medication", "consciousness", "bleeding"])
+@pytest.mark.parametrize("question_id", ["pain", "breathing", "allergy", "medication", "consciousness", "bleeding", "chest_pain"])
 @pytest.mark.parametrize("language", ["en", "zh"])
 def test_predefined_question_audio(question_id, language, monkeypatch):
     monkeypatch.setattr(main, "speech_to_text", lambda *args: pytest.fail("Quick questions must bypass ASR"))

@@ -4,8 +4,8 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
-- Latest successful application commit before this checkpoint update: `00839c6bb9c1e91d4d9408d0cd4fabf6f3c13499`
-- Current phase: Phase 1, Russian support; Russian ASR, translation, and TTS subphases are complete after this checkpoint commit.
+- Latest successful application commit before this checkpoint update: `cdf5464e4014f9a2d6e315579591240d32554abc`
+- Current phase: Phase 1, Russian support; model and phrase-pack subphases are complete after this checkpoint commit.
 
 ## Completed tasks
 
@@ -16,10 +16,11 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Russian ASR uses that same multilingual Whisper base model. Six distinct locally synthesized Russian utterances were recognized; some words were misspelled or inflected differently, so native review is still required.
 - Official Argos `ru→en` and `en→ru` packages are locally installed. `ru↔zh` uses an English pivot. The Russian Argos packages' Stanza resource metadata is incompatible with the installed Stanza version; their short utterances use local punctuation splitting instead. Relevant RU translation tests and existing pipeline regressions passed. All four Argos packages remain Git ignored.
 - The Russian Piper `ru_RU-irina-medium` voice is installed and the unchanged `text_to_speech(text, language)` interface now generates real Russian WAV files. The TTS contract, Russian ASR, baseline pipeline, and `/health` checks passed.
+- Seven English/Chinese/Russian Quick Questions are present, each Russian wording marked `pending_native_speaker_validation`. `data/russian_review_set.json` records six actual synthetic speech ASR and translation results with empty human-review fields. The generator is `python -m scripts.build_russian_review_set`. Phrase, review-data, quick-question, and frontend-build checks passed.
 
 ## Unfinished task and exact next action
 
-Add provisional Russian emergency questions (including chest pain), clearly label them pending native-speaker validation, and create a structured native-speaker review set. Then add Russian UI selection and API integration without changing the stable response schema. Keep EN/ZH working and commit/push each stable subphase before larger integration work.
+Add Russian API and UI selection without changing the stable `/process_audio` response schema. Ensure all six different-language pairs route to installed local ASR/translation/TTS and Quick Question audio accepts `ru`. Show the Russian wording review caveat in the UI. Then run Russian integration and proceed to Phase 2 final validation. Commit and push a stable integration milestone before any larger validation.
 
 ## Continue commands (PowerShell)
 

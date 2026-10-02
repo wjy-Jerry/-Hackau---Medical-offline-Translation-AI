@@ -1,8 +1,9 @@
 [
-  {"id": "pain", "en": "Where does it hurt?", "zh": "哪里疼？"},
-  {"id": "breathing", "en": "Can you breathe normally?", "zh": "你能正常呼吸吗？"},
-  {"id": "allergy", "en": "Are you allergic to any medication?", "zh": "你对药物过敏吗？"},
-  {"id": "medication", "en": "Are you taking any medication?", "zh": "你正在服用药物吗？"},
-  {"id": "consciousness", "en": "Did you lose consciousness?", "zh": "你失去过意识吗？"},
-  {"id": "bleeding", "en": "Are you bleeding?", "zh": "你在流血吗？"}
+  {"id": "pain", "en": "Where does it hurt?", "zh": "哪里疼？", "ru": "Где у вас болит?", "ru_review_status": "pending_native_speaker_validation"},
+  {"id": "breathing", "en": "Can you breathe normally?", "zh": "你能正常呼吸吗？", "ru": "Вы можете нормально дышать?", "ru_review_status": "pending_native_speaker_validation"},
+  {"id": "allergy", "en": "Are you allergic to any medication?", "zh": "你对药物过敏吗？", "ru": "У вас есть аллергия на какие-либо лекарства?", "ru_review_status": "pending_native_speaker_validation"},
+  {"id": "medication", "en": "Are you taking any medication?", "zh": "你正在服用药物吗？", "ru": "Вы принимаете какие-либо лекарства?", "ru_review_status": "pending_native_speaker_validation"},
+  {"id": "consciousness", "en": "Did you lose consciousness?", "zh": "你失去过意识吗？", "ru": "Вы теряли сознание?", "ru_review_status": "pending_native_speaker_validation"},
+  {"id": "bleeding", "en": "Are you bleeding?", "zh": "你在流血吗？", "ru": "У вас идёт кровь?", "ru_review_status": "pending_native_speaker_validation"},
+  {"id": "chest_pain", "en": "Do you have chest pain?", "zh": "你胸口疼吗？", "ru": "У вас болит грудь?", "ru_review_status": "pending_native_speaker_validation"}
 ]

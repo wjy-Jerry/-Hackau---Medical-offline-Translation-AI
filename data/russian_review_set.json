@@ -1,0 +1,97 @@
+{
+  "generated_at_utc": "2026-10-02T18:26:15.694898+00:00",
+  "review_status": "Pending native-speaker validation",
+  "test_audio_source": "Local Piper ru_RU-irina-medium synthetic voice",
+  "review_options": [
+    "Correct and natural",
+    "Understandable but awkward",
+    "Incorrect",
+    "Potentially dangerous meaning change"
+  ],
+  "cases": [
+    {
+      "id": "chest_pain",
+      "original_russian": "У меня болит грудь.",
+      "asr_output": "У меня болит грудь.",
+      "english_translation": "My chest hurts.",
+      "chinese_translation": "我胸口疼,我有点疼",
+      "russian_tts_text": "У меня болит грудь.",
+      "asr_ms": 823.4,
+      "english_translation_ms": 2295.6,
+      "chinese_translation_ms": 1222.1,
+      "human_review_category": null,
+      "human_review_notes": "",
+      "notes": "Synthetic Piper speech; pending native-speaker validation."
+    },
+    {
+      "id": "breathing",
+      "original_russian": "Я не могу нормально дышать.",
+      "asr_output": "Я не могу нормально дышать.",
+      "english_translation": "I can't breathe normally.",
+      "chinese_translation": "我无法正常呼吸。",
+      "russian_tts_text": "Я не могу нормально дышать.",
+      "asr_ms": 497.8,
+      "english_translation_ms": 34.8,
+      "chinese_translation_ms": 33.9,
+      "human_review_category": null,
+      "human_review_notes": "",
+      "notes": "Synthetic Piper speech; pending native-speaker validation."
+    },
+    {
+      "id": "allergy",
+      "original_russian": "У меня аллергия на пенициллин.",
+      "asr_output": "У меня аллергия на пеницеллин.",
+      "english_translation": "I'm allergic to penicillin.",
+      "chinese_translation": "我对青霉素过敏",
+      "russian_tts_text": "У меня аллергия на пенициллин.",
+      "asr_ms": 508.7,
+      "english_translation_ms": 43.0,
+      "chinese_translation_ms": 46.5,
+      "human_review_category": null,
+      "human_review_notes": "",
+      "notes": "Synthetic Piper speech; pending native-speaker validation."
+    },
+    {
+      "id": "bleeding",
+      "original_russian": "У меня кровотечение.",
+      "asr_output": "У меня кровотечение.",
+      "english_translation": "I'm bleeding.",
+      "chinese_translation": "我流血了 我流血了 我流血了",
+      "russian_tts_text": "У меня кровотечение.",
+      "asr_ms": 479.3,
+      "english_translation_ms": 30.0,
+      "chinese_translation_ms": 67.3,
+      "human_review_category": null,
+      "human_review_notes": "",
+      "notes": "Synthetic Piper speech; pending native-speaker validation."
+    },
+    {
+      "id": "medication",
+      "original_russian": "Я принимаю лекарства.",
+      "asr_output": "Я принимаю лекарство.",
+      "english_translation": "I'm taking my medicine.",
+      "chinese_translation": "我要吃药了",
+      "russian_tts_text": "Я принимаю лекарства.",
+      "asr_ms": 481.7,
+      "english_translation_ms": 34.3,
+      "chinese_translation_ms": 26.8,
+      "human_review_category": null,
+      "human_review_notes": "",
+      "notes": "Synthetic Piper speech; pending native-speaker validation."
+    },
+    {
+      "id": "dizziness",
+      "original_russian": "У меня кружится голова.",
+      "asr_output": "У меня кружится голова.",
+      "english_translation": "I'm dizzy.",
+      "chinese_translation": "我头晕",
+      "russian_tts_text": "У меня кружится голова.",
+      "asr_ms": 467.7,
+      "english_translation_ms": 37.2,
+      "chinese_translation_ms": 24.3,
+      "human_review_category": null,
+      "human_review_notes": "",
+      "notes": "Synthetic Piper speech; pending native-speaker validation."
+    }
+  ]
+}

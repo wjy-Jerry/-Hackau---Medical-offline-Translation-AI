@@ -4,7 +4,9 @@ FieldTalk is a 48-hour hackathon prototype for offline speech translation betwee
 
 ## Current scope
 
-English ↔ Chinese emergency communication. The interface provides Quick Questions, Yes / No, and Free Conversation. Russian is not available until the offline speech and translation models support it.
+English ↔ Chinese emergency communication is currently available in the interface. The interface provides Quick Questions, Yes / No, and Free Conversation. Local Russian models are installed, but Russian is not yet enabled in the API and language selector at this stage.
+
+Russian support is being added on the fallback branch. The seven Russian Quick Question phrases in `data/emergency_questions.json` are **pending native-speaker validation**. `data/russian_review_set.json` stores actual outputs from synthetic local Russian speech for a teammate to rate as correct and natural, understandable but awkward, incorrect, or potentially dangerous meaning change. All human-review fields are intentionally empty. Synthetic speech and machine translation do not establish patient-facing language quality.
 
 ## Architecture and stable interfaces
 
