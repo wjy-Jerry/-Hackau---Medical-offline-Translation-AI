@@ -1,9 +1,13 @@
 """ASR adapter: speech_to_text(audio_path, language=None) -> ASRResult."""
+import logging
+import time
 from functools import lru_cache
 from pathlib import Path
 
-from backend.config import ASR_DIR, MODE
+from backend.config import ASR_DIR, LANGUAGES
 from backend.schemas import ASRResult
+
+logger = logging.getLogger("fieldtalk.asr")
 
 
 class ModelUnavailable(RuntimeError):
@@ -13,27 +17,29 @@ class ModelUnavailable(RuntimeError):
 @lru_cache(maxsize=1)
 def _model():
     if not (ASR_DIR / "model.bin").is_file():
-        raise ModelUnavailable(f"ASR model missing at {ASR_DIR}. Run the model download script.")
+        raise ModelUnavailable(f"ASR model missing at {ASR_DIR}. Run python -m scripts.download_asr_model.")
     try:
         from faster_whisper import WhisperModel
     except ImportError as exc:
-        raise ModelUnavailable("faster-whisper is not installed. Install requirements-local.txt.") from exc
-    return WhisperModel(str(ASR_DIR), device="cpu", compute_type="int8", local_files_only=True)
+        raise ModelUnavailable("faster-whisper is not installed. Install requirements-asr.txt.") from exc
+    started = time.perf_counter()
+    model = WhisperModel(str(ASR_DIR), device="cpu", compute_type="int8", local_files_only=True)
+    logger.info("ASR model load_ms=%.1f", (time.perf_counter() - started) * 1000)
+    return model
 
 
 def speech_to_text(audio_path: str | Path, language: str | None = None) -> ASRResult:
     path = Path(audio_path)
     if not path.is_file() or path.stat().st_size == 0:
         raise ValueError("No audio recorded. Please record again.")
-    if MODE == "mock":
-        lang = language or "en"
-        text = "I am allergic to penicillin." if lang == "en" else "我对青霉素过敏。"
-        return ASRResult(text=text, language=lang, confidence=None)
-    if MODE != "local":
-        raise ValueError("FIELDTALK_MODE must be mock or local.")
+    if language is not None and language not in LANGUAGES:
+        raise ValueError(f"Unsupported ASR language: {language}.")
     try:
-        segments, info = _model().transcribe(str(path), language=language, beam_size=5, vad_filter=True)
+        model = _model()
+        started = time.perf_counter()
+        segments, info = model.transcribe(str(path), language=language, beam_size=5, vad_filter=False)
         text = " ".join(segment.text.strip() for segment in segments).strip()
+        logger.info("ASR inference_ms=%.1f", (time.perf_counter() - started) * 1000)
     except ModelUnavailable:
         raise
     except Exception as exc:

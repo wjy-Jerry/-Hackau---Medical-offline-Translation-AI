@@ -23,7 +23,12 @@ ALLOWED_SUFFIXES = {".webm", ".wav", ".ogg", ".mp4", ".m4a"}
 @app.get("/health")
 def health():
     if MODE == "mock":
-        return {"mode": MODE, "ready": True, "components": {"asr": "mock", "translation": "mock", "tts": "mock"}}
+        asr_ready = (ASR_DIR / "model.bin").is_file()
+        return {
+            "mode": MODE,
+            "ready": asr_ready,
+            "components": {"asr": "ready" if asr_ready else "missing", "translation": "mock", "tts": "mock"},
+        }
     try:
         from argostranslate import package
         installed = {(p.from_code, p.to_code) for p in package.get_installed_packages()}

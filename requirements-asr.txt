@@ -1,5 +1,3 @@
 -r requirements.txt
 faster-whisper>=1.1,<2
 av>=11,<19
-argostranslate>=1.9,<2
-piper-tts>=1.2,<2

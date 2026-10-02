@@ -1,26 +1,32 @@
-"""Mock contract tests; real model verification needs downloaded models and a microphone."""
+"""API contract tests with local ASR replaced only inside the test."""
 import os
 import wave
-from io import BytesIO
+
+import pytest
 
 os.environ["FIELDTALK_MODE"] = "mock"
 
 from fastapi.testclient import TestClient
 
+from backend import main
 from backend.main import app
-from backend.models.asr import speech_to_text
+from backend.models import asr
 from backend.models.translation import translate_and_extract
 from backend.models.tts import text_to_speech
+from backend.schemas import ASRResult
 
 
 client = TestClient(app)
 
 
-def test_asr_contract(tmp_path):
+def test_asr_reports_missing_local_model(tmp_path, monkeypatch):
     path = tmp_path / "sample.wav"
     path.write_bytes(b"mock audio")
-    result = speech_to_text(path, "en")
-    assert result.model_dump() == {"text": "I am allergic to penicillin.", "language": "en", "confidence": None}
+    monkeypatch.setattr(asr, "ASR_DIR", tmp_path)
+    asr._model.cache_clear()
+    with pytest.raises(asr.ModelUnavailable, match="ASR model missing"):
+        asr.speech_to_text(path, "en")
+    asr._model.cache_clear()
 
 
 def test_translation_contract():
@@ -36,7 +42,12 @@ def test_tts_contract():
     path.unlink()
 
 
-def test_mock_end_to_end():
+def test_mock_translation_and_tts_end_to_end(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "speech_to_text",
+        lambda audio_path, language: ASRResult(text="I am allergic to penicillin.", language=language, confidence=None),
+    )
     response = client.post(
         "/process_audio",
         data={"source_language": "en", "target_language": "zh"},
