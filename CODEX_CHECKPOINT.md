@@ -4,8 +4,8 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
-- Latest successful application commit before this checkpoint update: `042787d5b6b0837c044614bae1d58bb53ef2a4fc`
-- Current phase: Phase 1 integration validation; Russian API and UI integration is complete after this checkpoint commit.
+- Latest successful application commit before this checkpoint update: `06f8fe0108aa22dd4d2891d476a957c9521a437b`
+- Current phase: Phase 2 final fallback validation; Phase 1 Russian support is complete after this checkpoint commit.
 
 ## Completed tasks
 
@@ -18,10 +18,11 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - The Russian Piper `ru_RU-irina-medium` voice is installed and the unchanged `text_to_speech(text, language)` interface now generates real Russian WAV files. The TTS contract, Russian ASR, baseline pipeline, and `/health` checks passed.
 - Seven English/Chinese/Russian Quick Questions are present, each Russian wording marked `pending_native_speaker_validation`. `data/russian_review_set.json` records six actual synthetic speech ASR and translation results with empty human-review fields. The generator is `python -m scripts.build_russian_review_set`. Phrase, review-data, quick-question, and frontend-build checks passed.
 - The API now accepts all six different-language pairs among EN/ZH/RU with the same `/process_audio` schema. Quick Question audio accepts Russian. The existing frontend language selector and Yes/No controls include Russian and retain the emergency visual layout. A neutral reminder marks Russian wording as pending native-speaker review. API, phrase, translation, and frontend-build checks passed.
+- Real locally synthesized Russian speech completed RU→EN and RU→ZH `/process_audio` requests with local WAV retrieval. The RU→EN chest-pain sample returned “У меня болит грудь.” → “My chest hurts.” with ASR 761.7 ms, translation 2124.8 ms, TTS 1314.5 ms, total 4202.8 ms. The RU→ZH allergy sample completed in 3016.8 ms total. Actual browser checks at 1200/768/390px showed no horizontal overflow and exercised Quick Questions, Russian Yes/No, and RU→EN Free Conversation recording/result/audio presence.
 
 ## Unfinished task and exact next action
 
-Run real synthetic Russian speech → local ASR → English translation → English TTS through `/process_audio`, and inspect the actual frontend at desktop/tablet/mobile widths including Russian Quick Questions and Yes/No. Record timing and fix any integration bugs. Then begin Phase 2 final validation: EN→ZH, ZH→EN, RU→EN, Quick Questions, Yes/No, Free Conversation, failure states, offline-code inspection, and practical tests. Commit/push each stable validation or fix milestone.
+Run Phase 2 final validation: EN→ZH with allergy and chest pain, ZH→EN realistic speech, RU→EN, Quick Questions (including Repeat), Yes/No, Free Conversation including record-again, failure states, offline-code inspection, and practical tests. Record actual timing. Make only reasonable stability fixes, commit/push each stable validation or fix milestone, then produce the final overnight report with exact startup and demo commands.
 
 ## Continue commands (PowerShell)
 
@@ -45,7 +46,7 @@ Do not rerun the baseline tests above unless subsequent changes require them. Do
 
 ## Known errors and blockers
 
-- Real RU end-to-end API and browser checks remain unfinished after the UI/API integration milestone.
+- Russian speech evaluation used Piper synthetic audio only; real native-speaker speech quality has not been measured.
 - Russian ASR testing so far used synthetic Piper speech, not a native speaker recording. Native-speaker quality validation remains pending.
 - EN→RU model translated “Are you bleeding?” as wording closer to “Do you have blood?” in one check. Use provisional reviewed phrase-pack wording for Quick Questions and flag free-response Russian for human confirmation.
 - RU→ZH pivot produced repeated wording for one bleeding phrase. Treat RU↔ZH as experimental until native-speaker review.

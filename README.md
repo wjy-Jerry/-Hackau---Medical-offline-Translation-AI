@@ -8,6 +8,8 @@ English ↔ Chinese, Russian ↔ English, and Russian ↔ Chinese emergency comm
 
 Russian support is being added on the fallback branch. The seven Russian Quick Question phrases in `data/emergency_questions.json` are **pending native-speaker validation**. `data/russian_review_set.json` stores actual outputs from synthetic local Russian speech for a teammate to rate as correct and natural, understandable but awkward, incorrect, or potentially dangerous meaning change. All human-review fields are intentionally empty. Synthetic speech and machine translation do not establish patient-facing language quality.
 
+On 2026-10-03, locally synthesized Russian speech passed through the real `/process_audio` pipeline to English and Chinese with local playable WAV responses. The Russian → English chest-pain run reported 761.7 ms ASR, 2124.8 ms translation (cold model load), 1314.5 ms TTS, and 4202.8 ms total. A Russian → Chinese allergy run reported 460.7 ms ASR, 1192.8 ms translation, 1361.9 ms TTS, and 3016.8 ms total. These are single-machine technical samples, not human language-quality evaluations. Browser checks covered desktop (1200px), tablet (768px), and mobile (390px), including a Russian → English recorded conversation result.
+
 ## Architecture and stable interfaces
 
 ```text
