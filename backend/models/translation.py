@@ -76,4 +76,9 @@ def translate_and_extract(text: str, source_language: str, target_language: str)
         raise RuntimeError(f"Translation failed: {exc}") from exc
     if not translated_text.strip():
         raise RuntimeError("Translation returned empty text.")
-    return TranslationResult(translation=translated_text, key_information=extract_key_information(text))
+    try:
+        key_information = extract_key_information(text)
+    except Exception:
+        logger.exception("Information extraction failed; returning the translation without highlights")
+        key_information = {}
+    return TranslationResult(translation=translated_text, key_information=key_information)

@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from backend import main
 from backend.main import app
 from backend.models import asr
+from backend.models import translation as translation_module
 from backend.models.translation import translate_and_extract
 from backend.models.tts import text_to_speech
 from backend.schemas import ASRResult
@@ -155,6 +156,72 @@ def test_tts_failure_keeps_translated_text(monkeypatch):
     assert body["key_information"] == {"symptom": "Chest pain"}
     assert body["audio_url"] == ""
     assert "Speech unavailable" in body["warning"]
+
+
+def test_information_extraction_failure_keeps_translation(monkeypatch):
+    def fail_extraction(text):
+        raise RuntimeError("Test extraction failure")
+
+    monkeypatch.setattr(translation_module, "extract_key_information", fail_extraction)
+    result = translate_and_extract("My chest hurts.", "en", "zh")
+    assert "胸" in result.translation
+    assert result.key_information == {}
+
+
+@pytest.mark.parametrize(("audio", "source", "target", "expected"), [
+    (b"", "en", "zh", 400),
+    (b"sample", "fr", "en", 400),
+    (b"sample", "ru", "ru", 400),
+])
+def test_rejects_empty_audio_and_unsupported_languages(audio, source, target, expected):
+    response = client.post(
+        "/process_audio",
+        data={"source_language": source, "target_language": target},
+        files={"audio": ("sample.wav", audio, "audio/wav")},
+    )
+    assert response.status_code == expected
+
+
+def test_asr_failure_is_reported(monkeypatch):
+    def fail_asr(*args):
+        raise RuntimeError("Speech recognition failed: test failure")
+
+    monkeypatch.setattr(main, "speech_to_text", fail_asr)
+    response = client.post(
+        "/process_audio",
+        data={"source_language": "ru", "target_language": "en"},
+        files={"audio": ("sample.wav", b"sample", "audio/wav")},
+    )
+    assert response.status_code == 500
+    assert "Speech recognition failed" in response.json()["detail"]
+
+
+def test_translation_failure_is_reported(monkeypatch):
+    monkeypatch.setattr(main, "speech_to_text", lambda *args: ASRResult(text="My chest hurts.", language="en", confidence=None))
+
+    def fail_translation(*args):
+        raise RuntimeError("Translation failed: test failure")
+
+    monkeypatch.setattr(main, "translate_and_extract", fail_translation)
+    response = client.post(
+        "/process_audio",
+        data={"source_language": "en", "target_language": "zh"},
+        files={"audio": ("sample.wav", b"sample", "audio/wav")},
+    )
+    assert response.status_code == 500
+    assert "Translation failed" in response.json()["detail"]
+
+
+def test_low_confidence_warning_when_asr_supplies_a_score(monkeypatch):
+    monkeypatch.setattr(main, "speech_to_text", lambda *args: ASRResult(text="My chest hurts.", language="en", confidence=0.4))
+    response = client.post(
+        "/process_audio",
+        data={"source_language": "en", "target_language": "zh"},
+        files={"audio": ("sample.wav", b"sample", "audio/wav")},
+    )
+    assert response.status_code == 200
+    assert response.json()["confidence"] == 0.4
+    assert "Low recognition confidence" in response.json()["warning"]
 
 
 def test_rejects_unsupported_pair():

@@ -4,8 +4,8 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
-- Latest successful application commit before this checkpoint update: `06f8fe0108aa22dd4d2891d476a957c9521a437b`
-- Current phase: Phase 2 final fallback validation; Phase 1 Russian support is complete after this checkpoint commit.
+- Latest successful application commit before this checkpoint update: `0a67cdbac80f2e7cf732053287c14b3260ff5768`
+- Current phase: Phase 2 final fallback validation; A/B/C real-audio checks and failure-path fixes are complete after this checkpoint commit.
 
 ## Completed tasks
 
@@ -19,10 +19,11 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Seven English/Chinese/Russian Quick Questions are present, each Russian wording marked `pending_native_speaker_validation`. `data/russian_review_set.json` records six actual synthetic speech ASR and translation results with empty human-review fields. The generator is `python -m scripts.build_russian_review_set`. Phrase, review-data, quick-question, and frontend-build checks passed.
 - The API now accepts all six different-language pairs among EN/ZH/RU with the same `/process_audio` schema. Quick Question audio accepts Russian. The existing frontend language selector and Yes/No controls include Russian and retain the emergency visual layout. A neutral reminder marks Russian wording as pending native-speaker review. API, phrase, translation, and frontend-build checks passed.
 - Real locally synthesized Russian speech completed RU→EN and RU→ZH `/process_audio` requests with local WAV retrieval. The RU→EN chest-pain sample returned “У меня болит грудь.” → “My chest hurts.” with ASR 761.7 ms, translation 2124.8 ms, TTS 1314.5 ms, total 4202.8 ms. The RU→ZH allergy sample completed in 3016.8 ms total. Actual browser checks at 1200/768/390px showed no horizontal overflow and exercised Quick Questions, Russian Yes/No, and RU→EN Free Conversation recording/result/audio presence.
+- Phase 2 real synthetic-audio samples: EN→ZH allergy plus chest pain returned both `allergy: Penicillin` and `symptom: Chest pain` in 5228.5 ms total. ZH→EN chest pain plus breathing difficulty returned readable English and WAV in 854.5 ms; ASR added an extra `有` before `疼`, initially causing a chest-pain highlight miss. RU→EN chest pain returned readable English and WAV in 779.0 ms. The conservative Chinese pain pattern now handles that observed ASR variant. Emergency information extraction exceptions now leave the translation usable with `{}` highlights. Relevant tests, including empty audio, unsupported languages, ASR/translation/TTS failures, and low-confidence warning simulation, passed.
 
 ## Unfinished task and exact next action
 
-Run Phase 2 final validation: EN→ZH with allergy and chest pain, ZH→EN realistic speech, RU→EN, Quick Questions (including Repeat), Yes/No, Free Conversation including record-again, failure states, offline-code inspection, and practical tests. Record actual timing. Make only reasonable stability fixes, commit/push each stable validation or fix milestone, then produce the final overnight report with exact startup and demo commands.
+Finish Phase 2: browser Quick Question playback and Repeat, Yes/No selection, Free Conversation record-again, backend unavailable and error displays; inspect runtime for external network dependencies; verify local model files; run final full backend tests and frontend build. Do not claim physical Airplane Mode verification unless the network was actually disabled. Commit/push a final validation report or fixes, then produce the final overnight report with exact startup and demo commands.
 
 ## Continue commands (PowerShell)
 
