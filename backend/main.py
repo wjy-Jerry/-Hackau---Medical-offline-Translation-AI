@@ -22,27 +22,20 @@ ALLOWED_SUFFIXES = {".webm", ".wav", ".ogg", ".mp4", ".m4a"}
 
 @app.get("/health")
 def health():
-    if MODE == "mock":
-        asr_ready = (ASR_DIR / "model.bin").is_file()
-        return {
-            "mode": MODE,
-            "ready": asr_ready,
-            "components": {"asr": "ready" if asr_ready else "missing", "translation": "mock", "tts": "mock"},
-        }
     try:
         from argostranslate import package
         installed = {(p.from_code, p.to_code) for p in package.get_installed_packages()}
-    except ImportError:
+    except (ImportError, OSError):
         installed = set()
     components = {
         "asr": "ready" if (ASR_DIR / "model.bin").is_file() else "missing",
         "translation": "ready" if {("en", "zh"), ("zh", "en")} <= installed else "missing",
-        "tts": "ready" if all(
+        "tts": "mock" if MODE == "mock" else "ready" if all(
             (VOICES_DIR / f"{name}.onnx").is_file() and (VOICES_DIR / f"{name}.onnx.json").is_file()
             for name in VOICES.values()
         ) else "missing",
     }
-    return {"mode": MODE, "ready": all(v == "ready" for v in components.values()), "components": components}
+    return {"mode": MODE, "ready": all(v in {"ready", "mock"} for v in components.values()), "components": components}
 
 
 @app.post("/process_audio", response_model=ProcessResult)

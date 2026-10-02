@@ -136,7 +136,8 @@ function App() {
     </section>}
     <footer>
       {health?.mode === 'mock' ?
-        health.ready ? 'LOCAL ASR READY — translation and audio are mocked' : 'LOCAL ASR MODEL MISSING — translation and audio are mocked' :
+        health.ready ? 'LOCAL ASR + TRANSLATION READY — audio is mocked' :
+          `LOCAL MODEL MISSING — ${Object.entries(health.components).filter(([, value]) => value === 'missing').map(([name]) => name).join(', ')}` :
         health?.ready ? 'LOCAL MODE READY — disconnect network to verify' :
         health ? `LOCAL MODE NOT READY — ${Object.entries(health.components).filter(([, value]) => value !== 'ready').map(([name]) => name).join(', ')} missing` :
         'Checking local backend…'}

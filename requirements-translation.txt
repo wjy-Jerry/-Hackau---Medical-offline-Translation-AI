@@ -1,0 +1,2 @@
+-r requirements-asr.txt
+argostranslate>=1.9,<2
