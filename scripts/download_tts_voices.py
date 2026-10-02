@@ -19,7 +19,7 @@ def main():
         )
         if not model.is_file() or not config.is_file():
             raise RuntimeError(f"Piper voice files missing after download: {name}")
-    print(f"Local English and Chinese voices are ready in {VOICES_DIR}")
+    print(f"Local English, Chinese, and Russian voices are ready in {VOICES_DIR}")
 
 
 if __name__ == "__main__":

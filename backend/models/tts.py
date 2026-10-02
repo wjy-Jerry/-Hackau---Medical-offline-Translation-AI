@@ -8,7 +8,7 @@ from backend.config import AUDIO_DIR, VOICES, VOICES_DIR
 from backend.models.asr import ModelUnavailable
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=3)
 def _voice(language: str):
     voice_name = VOICES.get(language)
     if voice_name is None:

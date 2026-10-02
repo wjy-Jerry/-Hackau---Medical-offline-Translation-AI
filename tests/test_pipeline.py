@@ -75,7 +75,11 @@ assert 'penicillin' in translate_and_extract('我对青霉素过敏。', 'zh', '
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize(("language", "text"), [("en", "My chest hurts."), ("zh", "我对青霉素过敏。")])
+@pytest.mark.parametrize(("language", "text"), [
+    ("en", "My chest hurts."),
+    ("zh", "我对青霉素过敏。"),
+    ("ru", "У меня болит грудь."),
+])
 def test_tts_contract(language, text):
     path = text_to_speech(text, language)
     with wave.open(str(path), "rb") as audio:
