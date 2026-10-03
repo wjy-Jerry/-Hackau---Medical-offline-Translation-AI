@@ -16,3 +16,8 @@ generated_audio/
 *.pt
 *.pth
 *.ckpt
+android/.gradle/
+android/**/build/
+android/local.properties
+android/.idea/
+dist/*.apk

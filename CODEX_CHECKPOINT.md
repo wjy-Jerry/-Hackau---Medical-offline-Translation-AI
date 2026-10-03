@@ -5,7 +5,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
 - Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
-- Current phase: new 12-phase autonomous plan, Phase 8 architecture complete; Phase 9 is next.
+- Current phase: new 12-phase autonomous plan, Phase 9 native source milestone complete; Phase 10 build/toolchain is next.
 
 ## Completed tasks
 
@@ -18,6 +18,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - New plan Phase 6: `docs/EXHIBITION_DEMO.md` provides a 60–90 second live flow, suggested sentences, and honest microphone/backend fallback. Documentation commands match the current repo; no app code changed.
 - New plan Phase 7: `docs/PITCH_POSITIONING.md` describes the ambulance MVP, verified prototype boundaries, comparative positioning without named-competitor claims, and candidate future domain packs. No app code changed.
 - New plan Phase 8: `docs/ANDROID_ARCHITECTURE.md` compares the desktop pipeline with a standalone native Android app, documents measured desktop model sizes, candidate on-device recognizer/ML Kit translation/embedded TTS, conditional offline capability, build requirements, and risks using official sources. No Android code or SDK has been installed yet.
+- New plan Phase 9 source milestone: separate native Android Java/Gradle project includes shared ambulance phrase assets, 21 pre-generated local Piper WAVs (1.4 MB total), home/Quick Questions/Yes-No/in-memory Handoff. Free Conversation only uses `createOnDeviceSpeechRecognizer`, already-downloaded ML Kit models, and a non-network embedded TTS voice; model provisioning is an explicit connected setup. It reports missing capabilities and keeps text visible. Android structured extraction is intentionally unavailable; no facts are invented. **Android source has not yet compiled because SDK/Gradle are absent.** Tests before commit: 118 Python passed/2 skipped, 3 frontend passed, frontend build passed. This commit is a recoverable source milestone, not an APK validation.
 
 - The emergency frontend redesign and its audio cache fix are committed and pushed.
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
@@ -37,7 +38,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 ## Unfinished task and exact next action
 
-Start Phase 9 of the user's new 12-phase plan: implement a separate native Android project with bundled phrase pack and local question audio, Quick Questions, Yes / No, and in-memory Handoff. Make reasonable guarded attempts at on-device ASR/translation/TTS but label any missing capability honestly. First stable native milestone must be tested, committed, and pushed before long SDK/model operations. Then attempt Phase 10 debug APK build. Human review, real microphone, and physical Airplane Mode checks remain pending.
+Start Phase 10: install the official Android command-line SDK/build tools and Gradle wrapper outside Git, then compile the native project, fix any build issues, run available checks, and produce a debug APK in `dist/FieldTalk-debug.apk` plus the projectless `outputs` folder. If dependency/tool download fails, do not retry indefinitely; update this checkpoint with exact blocker and stop safely. Android emulator/physical validation is still pending. Human review, real microphone, and physical Airplane Mode checks remain pending.
 
 ## Continue commands (PowerShell)
 
