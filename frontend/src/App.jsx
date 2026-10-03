@@ -68,7 +68,7 @@ function Home({ source, target, setSource, setTarget, health, openMode, statemen
     <main className="home-main">
       <div className="intro"><p className="eyebrow">FIELD COMMUNICATION / LOCAL DEVICE</p>
         <h1>Offline emergency<br />communication.</h1>
-        <p>Choose a mode. Keep the patient-facing message clear and direct.</p>
+        <p>Get critical information through when time, connectivity, and attention are limited.</p>
       </div>
       <section className="language-panel" aria-label="Languages">
         <div className="language-field"><label htmlFor="responder-language">RESPONDER LANGUAGE</label>
@@ -86,13 +86,13 @@ function Home({ source, target, setSource, setTarget, health, openMode, statemen
       <section className="mode-section" aria-label="Communication modes">
         <div className="section-heading"><span className="eyebrow">START HERE</span><span>{languages[source]} → {languages[target]} available</span></div>
         <div className="mode-grid">
-          <ModeCard featured icon="question" title="QUICK QUESTIONS" subtitle="Critical predefined questions" onClick={() => openMode('quick')} />
-          <ModeCard icon="check" title="YES / NO" subtitle="One question, two large answers" onClick={() => openMode('yesno')} />
-          <ModeCard icon="mic" title="FREE CONVERSATION" subtitle="Speech-to-speech translation" onClick={() => openMode('conversation')} />
+          <ModeCard featured icon="question" title="QUICK QUESTIONS" subtitle="Fast critical communication" onClick={() => openMode('quick')} />
+          <ModeCard icon="check" title="YES / NO" subtitle="For limited patient response" onClick={() => openMode('yesno')} />
+          <ModeCard icon="mic" title="FREE CONVERSATION" subtitle="Open speech communication" onClick={() => openMode('conversation')} />
         </div>
       </section>
       <button type="button" className="handoff-link" onClick={() => openMode('handoff')}>
-        <span><strong>VIEW HANDOFF</strong><small>Patient-stated information · {statementCount} {statementCount === 1 ? 'statement' : 'statements'}</small></span>
+        <span><strong>HANDOFF · VIEW SUMMARY</strong><small>Patient-stated emergency information · {statementCount} {statementCount === 1 ? 'statement' : 'statements'}</small></span>
         <Icon name="arrow" size={22} />
       </button>
       <p className="scope-note"><Icon name="info" size={18} /> For responsive patients. Confirm important details with the patient.</p>
@@ -379,6 +379,13 @@ function HandoffCard({ statements, health, onHome, onClear }) {
         <div className="handoff-grid">{HANDOFF_FIELDS.map((key) => <div className="handoff-field" key={key}>
           <span>{handoffLabels[key]}</span><strong className={facts[key].length ? '' : 'unknown'}>{facts[key].length ? facts[key].join('; ') : 'Unknown / Not stated'}</strong>
         </div>)}</div>
+        {statements.length > 0 && <div className="handoff-statements">
+          <p className="eyebrow">ADDED PATIENT STATEMENTS</p>
+          {statements.map((statement, index) => <div className="handoff-statement" key={`${statement.updatedAt}-${index}`}>
+            <strong lang={statement.patientLanguage}>{statement.original}</strong>
+            {statement.translation && <span>Translation: {statement.translation}</span>}
+          </div>)}
+        </div>}
         <div className="handoff-meta"><span>Last updated</span><strong>{latest ? new Date(latest.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Unknown / Not stated'}</strong></div>
         <p className="handoff-disclaimer">Based on statements manually added on this device. This is a communication aid, not a diagnosis.</p>
       </section>

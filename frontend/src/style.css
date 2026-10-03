@@ -130,6 +130,11 @@ h1, h2, p { overflow-wrap: anywhere; }
 .handoff-field span { color: #547087; font-size: 12px; font-weight: 750; text-transform: uppercase; letter-spacing: .05em; }
 .handoff-field strong { color: #173b57; font-size: 18px; line-height: 1.35; }
 .handoff-field strong.unknown { color: #6b7c88; font-weight: 550; }
+.handoff-statements { padding: 20px 2px 8px; border-bottom: 1px solid #e0e8ed; }
+.handoff-statement { padding: 13px 0; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #edf1f4; }
+.handoff-statement:last-child { border-bottom: 0; }
+.handoff-statement strong { color: #173b57; font-size: 17px; line-height: 1.4; }
+.handoff-statement span { color: #526b7d; font-size: 14px; line-height: 1.45; }
 .handoff-disclaimer { margin: 14px 2px 0; color: #5c7484; font-size: 12px; line-height: 1.45; }
 .handoff-clear { margin-top: 14px; }
 

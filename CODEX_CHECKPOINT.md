@@ -5,7 +5,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
 - Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
-- Current phase: new 12-phase autonomous plan, Phase 4 complete; Phase 5 is next.
+- Current phase: new 12-phase autonomous plan, Phase 5 complete; Phase 6 is next.
 
 ## Completed tasks
 
@@ -14,6 +14,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - New plan Phase 2: frontend now names unclear speech, missing audio, unavailable translation, unsupported pairs, and missing local backend with a safe next action. TTS failure leaves translated text visible. Processing shows one honest status instead of timed pseudo-stages. Checks: 1 frontend unit test, 52 relevant API tests, and frontend build passed.
 - New plan Phase 3: conservative English/Chinese extraction now highlights explicitly stated dizziness, nausea, and fever as `other_symptom`, in addition to the existing six target fields. Added positive, negated, and combined-statement cases. Checks: 102 relevant Python tests, 1 frontend unit test, and frontend build passed. Russian extraction is still limited; no inferred fields are inserted.
 - New plan Phase 4: in-memory Emergency Handoff Card stores only manually added patient statements and whitelisted extracted facts; missing fields say `Unknown / Not stated`. The card has View Handoff and confirmed clear session actions. No personal data is persisted or sent to a new service. Checks: 3 frontend unit tests, 102 relevant Python tests, and frontend build passed. Browser/hardware confirmation remains pending.
+- New plan Phase 5: home copy emphasizes critical offline communication; Quick Questions remain the visually primary action, Handoff is visible on home. Actual Chrome screenshots at 1200/768/390 px had no horizontal overflow. Browser handoff flow used a real RU→EN local API response from the Russian WAV fixture with the microphone request substituted in Chrome because headless microphone capture returned no speech. The card now displays the original Russian and English translation even when conservative extraction finds no structured RU fields. Checks: 3 frontend tests, 50 API tests, frontend build, and browser layout/flow passed. The simulated browser transport is not a real microphone validation.
 
 - The emergency frontend redesign and its audio cache fix are committed and pushed.
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
@@ -33,7 +34,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 ## Unfinished task and exact next action
 
-Start Phase 5 of the user's new 12-phase plan: strengthen emergency-first presentation, making Quick Questions primary and Handoff clear on the home screen. Inspect and fix desktop/tablet/mobile layouts at 1200/768/390 px, and verify the conversation-to-handoff browser flow. Run tests/build, commit `feat: strengthen emergency-first product UX`, and push only `origin backup/codex-full-stack`. Then continue in strict phase order. Human review and physical Airplane Mode checks remain pending.
+Start Phase 6 of the user's new 12-phase plan: prepare a concise exhibition flow in `docs/EXHIBITION_DEMO.md` for a 60–90 second hands-on demonstration, honest offline/voice/handoff setup and fallback. Validate doc commands against the repo, commit `docs: add exhibition demo flow`, and push only `origin backup/codex-full-stack`. Then continue in strict phase order. Human review, real microphone, and physical Airplane Mode checks remain pending.
 
 ## Continue commands (PowerShell)
 
