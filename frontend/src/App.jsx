@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { questions } from './phrasePacks'
+import { classifyProcessError } from './failSafe'
 
 const languages = { en: 'English', zh: 'Chinese', ru: 'Russian' }
 const answerLabels = {
@@ -192,6 +193,7 @@ function Conversation({ source, target, health, onHome }) {
   const [phase, setPhase] = useState('idle')
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const [errorKind, setErrorKind] = useState('')
   const [audioNotice, setAudioNotice] = useState('')
   const recorder = useRef(null)
   const recordingRef = useRef(false)
@@ -218,10 +220,8 @@ function Conversation({ source, target, health, onHome }) {
   }, [result])
 
   async function sendAudio(blob, extension) {
-    if (!blob.size) { setError('No audio captured. Please record again.'); setPhase('error'); return }
-    setPhase('recognizing')
-    const translationTimer = setTimeout(() => setPhase((current) => current === 'recognizing' ? 'translating' : current), 1400)
-    const speechTimer = setTimeout(() => setPhase((current) => ['recognizing', 'translating'].includes(current) ? 'speech' : current), 3200)
+    if (!blob.size) { const failure = classifyProcessError('No audio recorded.', 400); setError(failure.text); setErrorKind(failure.kind); setPhase('error'); return }
+    setPhase('processing')
     const form = new FormData()
     form.append('audio', blob, `recording.${extension}`)
     form.append('source_language', source)
@@ -229,24 +229,25 @@ function Conversation({ source, target, health, onHome }) {
     try {
       const response = await fetch('/process_audio', { method: 'POST', body: form })
       const data = await response.json().catch(() => { throw new TypeError('Invalid local backend response') })
-      if (!response.ok) throw new Error(data?.detail || 'Could not process the recording.')
+      if (!response.ok) {
+        const failure = classifyProcessError(data?.detail, response.status)
+        setError(failure.text); setErrorKind(failure.kind); setPhase('error'); return
+      }
       setResult(data)
       setPhase('done')
     } catch (requestError) {
-      setError(requestError instanceof TypeError ? 'Local backend unavailable. Check the device connection.' : requestError.message)
+      const failure = classifyProcessError('', 0)
+      setError(failure.text); setErrorKind(failure.kind)
       setPhase('error')
-    } finally {
-      clearTimeout(translationTimer)
-      clearTimeout(speechTimer)
     }
   }
 
   async function beginRecording() {
-    if (startingRef.current || recordingRef.current || ['recognizing', 'translating', 'speech'].includes(phase)) return
+    if (startingRef.current || recordingRef.current || phase === 'processing') return
     startingRef.current = true
-    setError(''); setAudioNotice(''); setResult(null)
+    setError(''); setErrorKind(''); setAudioNotice(''); setResult(null)
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      setError('This browser cannot record audio. Use a current browser on localhost.'); setPhase('error'); startingRef.current = false; return
+      setError('Audio recording unavailable in this browser. Use Quick Questions or allow microphone access.'); setErrorKind('no-audio'); setPhase('error'); startingRef.current = false; return
     }
     try {
       const media = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -257,7 +258,7 @@ function Conversation({ source, target, health, onHome }) {
       const extension = chosen?.[1] || (instance.mimeType.includes('mp4') ? 'mp4' : 'webm')
       chunks.current = []
       instance.ondataavailable = (event) => { if (event.data.size) chunks.current.push(event.data) }
-      instance.onerror = () => { setError('Recording failed. Please try again.'); setPhase('error') }
+      instance.onerror = () => { setError('Recording failed. Please try again.'); setErrorKind('no-audio'); setPhase('error') }
       instance.onstop = () => {
         media.getTracks().forEach((track) => track.stop())
         stream.current = null
@@ -274,6 +275,7 @@ function Conversation({ source, target, health, onHome }) {
       stream.current?.getTracks().forEach((track) => track.stop())
       stream.current = null
       setError(recordError.name === 'NotAllowedError' ? 'Microphone permission denied. Allow access and try again.' : `Could not start recording: ${recordError.message}`)
+      setErrorKind('no-audio')
       setPhase('error')
     } finally {
       startingRef.current = false
@@ -285,7 +287,7 @@ function Conversation({ source, target, health, onHome }) {
   }
 
   function pointerDown(event) {
-    if (event.button !== 0 || ['recognizing', 'translating', 'speech'].includes(phase)) return
+    if (event.button !== 0 || phase === 'processing') return
     event.currentTarget.setPointerCapture(event.pointerId)
     if (recordingRef.current) { pressedAt.current = null; finishRecording(); return }
     pressedAt.current = performance.now()
@@ -306,8 +308,7 @@ function Conversation({ source, target, health, onHome }) {
     audio.play().then(() => setAudioNotice('')).catch(() => setAudioNotice('Audio playback failed. The text remains available.'))
   }
 
-  const processing = ['recognizing', 'translating', 'speech'].includes(phase)
-  const stageLabels = { recognizing: 'Recognizing…', translating: 'Translating…', speech: 'Preparing speech…' }
+  const processing = phase === 'processing'
 
   return <>
     <Header health={health} title="Free conversation" onBack={recording || processing ? null : onHome} />
@@ -322,14 +323,11 @@ function Conversation({ source, target, health, onHome }) {
           onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) {
             event.preventDefault(); if (recordingRef.current) finishRecording(); else void beginRecording()
           } }}><Icon name="mic" size={38} /></button>
-        <div className="record-copy" aria-live="polite"><strong>{recording ? 'Listening…' : processing ? stageLabels[phase] : 'Hold to speak'}</strong>
+        <div className="record-copy" aria-live="polite"><strong>{recording ? 'Listening…' : processing ? 'Processing audio…' : 'Hold to speak'}</strong>
           <span>{recording ? 'Release after holding, or tap again to finish.' : processing ? 'Working locally. Keep the device nearby.' : 'Hold and release, or tap once to start and again to finish.'}</span></div>
-        {processing && <div className="progress-steps" aria-label="Processing stages">
-          {['recognizing', 'translating', 'speech'].map((stage, index) =>
-            <span key={stage} className={stage === phase ? 'active' : ''}>{String(index + 1).padStart(2, '0')} {stageLabels[stage].replace('…', '')}</span>)}
-        </div>}
+        {processing && <p className="processing-note" role="status">Recognizing, translating, and preparing speech locally. This may take a moment.</p>}
       </div>}
-      {error && <div className={`alert ${/No audio captured|Recording failed|recognition|No speech/i.test(error) ? 'alert-danger' : 'alert-neutral'}`} role="alert"><Icon name="info" size={20} />{error}</div>}
+      {error && <div className={`alert ${errorKind === 'unclear-speech' ? 'alert-danger' : 'alert-neutral'}`} role="alert"><Icon name="info" size={20} />{error}</div>}
       {result && <div className="result-stack" aria-label="Translation result">
         <div className="result-card original-card"><p className="eyebrow">ORIGINAL · {languages[source].toUpperCase()}</p><p className="result-text">{result.original_text}</p></div>
         <div className="result-card translation-card"><p className="eyebrow">TRANSLATION · {languages[target].toUpperCase()}</p>
@@ -342,10 +340,11 @@ function Conversation({ source, target, health, onHome }) {
         </div>}
         <div className="confidence-row"><span>Recognition confidence</span><strong>{result.confidence == null ? 'Not available' : `${Math.round(result.confidence * 100)}%`}</strong></div>
         {result.warning && <div className={`alert ${result.warning.includes('Low recognition') ? 'alert-danger' : 'alert-neutral'}`} role="alert"><Icon name="info" size={20} />{result.warning}</div>}
+        {!result.audio_url && !result.warning?.includes('Speech unavailable') && <div className="alert alert-neutral" role="status"><Icon name="info" size={20} />Audio unavailable. Read the translation on screen.</div>}
         {audioNotice && <div className="alert alert-neutral" role="status"><Icon name="info" size={20} />{audioNotice}</div>}
         {result.audio_url && <audio ref={resultAudio} src={result.audio_url} preload="auto" onError={() => setAudioNotice('Audio playback failed. The text remains available.')} />}
         <div className="result-actions"><button className="primary-button" type="button" onClick={playTranslation} disabled={!result.audio_url}><Icon name="sound" /> PLAY TRANSLATION</button>
-          <button className="secondary-button" type="button" onClick={() => { setResult(null); setPhase('idle'); setError(''); setAudioNotice('') }}><Icon name="repeat" /> RECORD AGAIN</button></div>
+          <button className="secondary-button" type="button" onClick={() => { setResult(null); setPhase('idle'); setError(''); setErrorKind(''); setAudioNotice('') }}><Icon name="repeat" /> RECORD AGAIN</button></div>
       </div>}
     </main>
   </>
