@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { questions } from './phrasePacks'
 import { classifyProcessError } from './failSafe'
+import { addPatientStatement, HANDOFF_FIELDS, summarizeStatements } from './handoff'
 
 const languages = { en: 'English', zh: 'Chinese', ru: 'Russian' }
 const answerLabels = {
@@ -14,6 +15,7 @@ const informationLabels = {
   loss_of_consciousness: 'Loss of consciousness',
   other_symptom: 'Other stated symptom',
 }
+const handoffLabels = { ...informationLabels, symptom: 'Pain location' }
 const yesNoQuestions = questions.filter((question) => question.id !== 'pain')
 
 function Icon({ name, size = 24 }) {
@@ -60,7 +62,7 @@ function ModeCard({ icon, title, subtitle, featured, onClick }) {
   </button>
 }
 
-function Home({ source, target, setSource, setTarget, health, openMode }) {
+function Home({ source, target, setSource, setTarget, health, openMode, statementCount }) {
   return <>
     <Header health={health} />
     <main className="home-main">
@@ -89,6 +91,10 @@ function Home({ source, target, setSource, setTarget, health, openMode }) {
           <ModeCard icon="mic" title="FREE CONVERSATION" subtitle="Speech-to-speech translation" onClick={() => openMode('conversation')} />
         </div>
       </section>
+      <button type="button" className="handoff-link" onClick={() => openMode('handoff')}>
+        <span><strong>VIEW HANDOFF</strong><small>Patient-stated information · {statementCount} {statementCount === 1 ? 'statement' : 'statements'}</small></span>
+        <Icon name="arrow" size={22} />
+      </button>
       <p className="scope-note"><Icon name="info" size={18} /> For responsive patients. Confirm important details with the patient.</p>
       {(source === 'ru' || target === 'ru') && <p className="review-note"><Icon name="info" size={18} /> Russian wording is pending native-speaker validation.</p>}
     </main>
@@ -189,13 +195,14 @@ function QuestionsMode({ mode, source, target, health, onHome }) {
   </>
 }
 
-function Conversation({ source, target, health, onHome }) {
+function Conversation({ source, target, health, onHome, onAddStatement, onViewHandoff }) {
   const [recording, setRecording] = useState(false)
   const [phase, setPhase] = useState('idle')
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [errorKind, setErrorKind] = useState('')
   const [audioNotice, setAudioNotice] = useState('')
+  const [savedToHandoff, setSavedToHandoff] = useState(false)
   const recorder = useRef(null)
   const recordingRef = useRef(false)
   const startingRef = useRef(false)
@@ -246,7 +253,7 @@ function Conversation({ source, target, health, onHome }) {
   async function beginRecording() {
     if (startingRef.current || recordingRef.current || phase === 'processing') return
     startingRef.current = true
-    setError(''); setErrorKind(''); setAudioNotice(''); setResult(null)
+    setError(''); setErrorKind(''); setAudioNotice(''); setResult(null); setSavedToHandoff(false)
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setError('Audio recording unavailable in this browser. Use Quick Questions or allow microphone access.'); setErrorKind('no-audio'); setPhase('error'); startingRef.current = false; return
     }
@@ -344,9 +351,40 @@ function Conversation({ source, target, health, onHome }) {
         {!result.audio_url && !result.warning?.includes('Speech unavailable') && <div className="alert alert-neutral" role="status"><Icon name="info" size={20} />Audio unavailable. Read the translation on screen.</div>}
         {audioNotice && <div className="alert alert-neutral" role="status"><Icon name="info" size={20} />{audioNotice}</div>}
         {result.audio_url && <audio ref={resultAudio} src={result.audio_url} preload="auto" onError={() => setAudioNotice('Audio playback failed. The text remains available.')} />}
+        <div className="handoff-add">
+          <p>Only add this result if the patient spoke. Confirm critical details before handoff.</p>
+          <button className="secondary-button" type="button" disabled={savedToHandoff} onClick={() => {
+            onAddStatement(result, source); setSavedToHandoff(true)
+          }}><Icon name="check" /> {savedToHandoff ? 'ADDED TO HANDOFF' : 'ADD PATIENT STATEMENT'}</button>
+          {savedToHandoff && <button className="text-button" type="button" onClick={onViewHandoff}>VIEW HANDOFF <Icon name="arrow" size={18} /></button>}
+        </div>
         <div className="result-actions"><button className="primary-button" type="button" onClick={playTranslation} disabled={!result.audio_url}><Icon name="sound" /> PLAY TRANSLATION</button>
-          <button className="secondary-button" type="button" onClick={() => { setResult(null); setPhase('idle'); setError(''); setErrorKind(''); setAudioNotice('') }}><Icon name="repeat" /> RECORD AGAIN</button></div>
+          <button className="secondary-button" type="button" onClick={() => { setResult(null); setPhase('idle'); setError(''); setErrorKind(''); setAudioNotice(''); setSavedToHandoff(false) }}><Icon name="repeat" /> RECORD AGAIN</button></div>
       </div>}
+    </main>
+  </>
+}
+
+function HandoffCard({ statements, health, onHome, onClear }) {
+  const facts = summarizeStatements(statements)
+  const latest = statements.at(-1)
+  const language = latest?.patientLanguage ? languages[latest.patientLanguage] : 'Unknown / Not stated'
+  return <>
+    <Header health={health} title="Emergency handoff" onBack={onHome} />
+    <main className="handoff-main">
+      <div className="mode-intro"><p className="eyebrow">EMERGENCY HANDOFF</p><h1>Patient-stated information.</h1>
+        <p>Show this card to the next responder. Confirm every critical detail with the patient.</p></div>
+      <section className="handoff-card" aria-label="Patient-stated information">
+        <div className="handoff-meta"><span>Patient language</span><strong>{language}</strong></div>
+        <div className="handoff-grid">{HANDOFF_FIELDS.map((key) => <div className="handoff-field" key={key}>
+          <span>{handoffLabels[key]}</span><strong className={facts[key].length ? '' : 'unknown'}>{facts[key].length ? facts[key].join('; ') : 'Unknown / Not stated'}</strong>
+        </div>)}</div>
+        <div className="handoff-meta"><span>Last updated</span><strong>{latest ? new Date(latest.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Unknown / Not stated'}</strong></div>
+        <p className="handoff-disclaimer">Based on statements manually added on this device. This is a communication aid, not a diagnosis.</p>
+      </section>
+      <button className="text-button handoff-clear" type="button" disabled={!statements.length} onClick={() => {
+        if (window.confirm('Clear all patient-stated information from this session?')) onClear()
+      }}>CLEAR SESSION</button>
     </main>
   </>
 }
@@ -356,6 +394,7 @@ export default function App() {
   const [target, setTarget] = useState('zh')
   const [screen, setScreen] = useState('home')
   const [health, setHealth] = useState(null)
+  const [statements, setStatements] = useState([])
 
   useEffect(() => {
     fetch('/health').then(async (response) => {
@@ -365,8 +404,11 @@ export default function App() {
   }, [])
 
   return <div className="app-shell">
-    {screen === 'home' && <Home source={source} target={target} setSource={setSource} setTarget={setTarget} health={health} openMode={setScreen} />}
+    {screen === 'home' && <Home source={source} target={target} setSource={setSource} setTarget={setTarget} health={health} openMode={setScreen} statementCount={statements.length} />}
     {(screen === 'quick' || screen === 'yesno') && <QuestionsMode key={screen} mode={screen} source={source} target={target} health={health} onHome={() => setScreen('home')} />}
-    {screen === 'conversation' && <Conversation source={source} target={target} health={health} onHome={() => setScreen('home')} />}
+    {screen === 'conversation' && <Conversation source={source} target={target} health={health} onHome={() => setScreen('home')}
+      onAddStatement={(result, patientLanguage) => setStatements((current) => addPatientStatement(current, result, patientLanguage))}
+      onViewHandoff={() => setScreen('handoff')} />}
+    {screen === 'handoff' && <HandoffCard statements={statements} health={health} onHome={() => setScreen('home')} onClear={() => setStatements([])} />}
   </div>
 }
