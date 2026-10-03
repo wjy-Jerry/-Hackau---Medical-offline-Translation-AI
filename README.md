@@ -1,16 +1,18 @@
 # FieldTalk
 
-FieldTalk is a 48-hour hackathon prototype for offline speech translation between a first responder and a conscious patient. It translates communication; it does not diagnose, recommend treatment, or make medical decisions. Confirm critical details with the patient. **Current stage: local ASR, translation, and TTS are real.**
+FieldTalk is a 48-hour hackathon prototype for offline emergency communication between a first responder and a conscious patient. It translates communication; it does not diagnose, recommend treatment, or make medical decisions. Confirm critical details with the patient. **Current Windows web fallback uses real local ASR, translation, and TTS.** A separate Android debug APK has been built, with phone testing still pending.
 
 ## Current scope
 
-English ↔ Chinese, Russian ↔ English, and Russian ↔ Chinese emergency communication is available in the same interface. Russian ↔ Chinese uses English as a local translation pivot and needs extra human review. The interface provides Quick Questions, Yes / No, and Free Conversation.
+English ↔ Chinese, Russian ↔ English, and Russian ↔ Chinese emergency communication is available in the Windows web interface. Russian ↔ Chinese uses English as a local translation pivot and needs extra human review. The interface provides Quick Questions, Yes / No, Free Conversation, and an in-memory Emergency Handoff Card.
 
-Russian support is present on the fallback branch. The seven Russian Quick Question phrases in `data/emergency_questions.json` are **pending native-speaker validation**. `data/russian_review_set.json` stores actual outputs from synthetic local Russian speech for a teammate to rate as correct and natural, understandable but awkward, incorrect, or potentially dangerous meaning change. All human-review fields are intentionally empty. Synthetic speech and machine translation do not establish patient-facing language quality.
+Russian support is present on the fallback branch. The seven Russian Quick Question phrases in `data/phrase_packs/ambulance/ru.json` are **pending native-speaker validation**; `data/emergency_questions.json` is a compatibility snapshot. `data/russian_review_set.json` stores actual outputs from synthetic local Russian speech for a teammate to rate as correct and natural, understandable but awkward, incorrect, or potentially dangerous meaning change. All human-review fields are intentionally empty. Synthetic speech and machine translation do not establish patient-facing language quality.
 
 On 2026-10-03, locally synthesized Russian speech passed through the real `/process_audio` pipeline to English and Chinese with local playable WAV responses. The Russian → English chest-pain run reported 761.7 ms ASR, 2124.8 ms translation (cold model load), 1314.5 ms TTS, and 4202.8 ms total. A Russian → Chinese allergy run reported 460.7 ms ASR, 1192.8 ms translation, 1361.9 ms TTS, and 3016.8 ms total. These are single-machine technical samples, not human language-quality evaluations. Browser checks covered desktop (1200px), tablet (768px), and mobile (390px), including a Russian → English recorded conversation result.
 
 See [demo validation and tomorrow's walkthrough](docs/DEMO_VALIDATION.md) for actual multilingual results, offline-test limits, failure checks, and the manual demo sequence.
+
+The [Android architecture](docs/ANDROID_ARCHITECTURE.md), [Android validation record](docs/ANDROID_VALIDATION.md), and [final validation record](docs/FINAL_VALIDATION.md) describe the separate APK. Its bundled Quick Questions, Yes / No, and Handoff source/build are complete, but no Android device or emulator was available for runtime testing. Android Free Conversation is conditional on an on-device recognizer, previously downloaded ML Kit models, and an embedded offline voice; Android structured extraction is not implemented.
 
 ## Architecture and stable interfaces
 
@@ -23,7 +25,7 @@ ASR → Translation (+ patient-stated information) → TTS
                 ↓
 JSON result + local /audio/{id}.wav → browser playback
 
-Quick Questions / Yes-No → bundled bilingual prompt → GET /quick_question/{id}/audio
+Quick Questions / Yes-No → bundled EN/ZH/RU prompt → GET /quick_question/{id}/audio
                                               ↓ local Piper voice → browser playback
 ```
 
@@ -35,7 +37,7 @@ Keep these public interfaces and response keys stable when replacing a model:
 | Translation | `translate_and_extract(text, source_language, target_language)` | `{translation: str, key_information: object}` |
 | TTS | `text_to_speech(text, language)` | Path to a local WAV file |
 | API | `POST /process_audio` multipart fields `audio`, `source_language`, `target_language` | `{original_text, translation, confidence, key_information, audio_url, warning, timings_ms, mode}` |
-| Quick-question audio | `GET /quick_question/{id}/audio?target_language=en\|zh` | Local WAV for one predefined prompt |
+| Quick-question audio | `GET /quick_question/{id}/audio?target_language=en\|zh\|ru` | Local WAV for one predefined prompt |
 
 Language codes are `en`, `zh`, and `ru`. Confidence is `null` when the ASR model has no calibrated utterance confidence. The information extractor currently highlights only explicit English or Chinese source phrases; Russian source highlights may be empty. It does not diagnose, recommend medication or treatment, or make decisions.
 
@@ -45,7 +47,8 @@ Language codes are `en`, `zh`, and `ru`. Confidence is `null` when the ASR model
 backend/                 FastAPI, contracts, configuration, model adapters
 backend/models/          asr.py, translation.py, tts.py, emergency_nlp.py
 frontend/                React/Vite home, question, yes/no, and conversation views
-data/                    Shared bilingual question list used by frontend and backend
+data/phrase_packs/       Shared EN/ZH/RU local question pack used by frontend, backend, and Android
+android/                 Separate native Android source and bundled question audio
 scripts/download_asr_model.py  One-time ASR model setup
 scripts/download_translation_models.py  One-time translation model setup
 scripts/download_tts_voices.py  One-time English/Chinese/Russian voice setup
@@ -77,7 +80,7 @@ cd frontend
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. Set the responder and patient languages, then choose a mode. Quick Questions and Yes / No display reviewed patient-language prompts immediately from the bundled question file and request only local speech from the backend. Free Conversation records speech for the existing `/process_audio` pipeline. If speech generation fails, the written question or translated text remains visible. Yes / No selections stay on the current screen and are not saved as medical records.
+Open `http://127.0.0.1:5173`. Set the responder and patient languages, then choose a mode. Quick Questions and Yes / No display patient-language prompts immediately from the local phrase pack and request only local speech from the backend. No human review is recorded for the current pack; Russian wording is explicitly pending native-speaker validation. Free Conversation records speech for the existing `/process_audio` pipeline. If speech generation fails, the written question or translated text remains visible. Yes / No selections stay on the current screen. Add only confirmed patient statements to the in-memory Handoff Card; missing facts remain Unknown / Not stated.
 
 ## Local ASR model (internet needed once)
 

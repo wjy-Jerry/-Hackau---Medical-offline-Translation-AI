@@ -5,7 +5,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
 - Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
-- Current phase: new 12-phase autonomous plan, Phase 11 static/device-discovery validation complete; Phase 12 final validation is next.
+- Current phase: new 12-phase autonomous plan, Phase 12 final validation complete; remaining checks require a real device, microphone, and human language review.
 
 ## Completed tasks
 
@@ -21,6 +21,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - New plan Phase 9 source milestone: separate native Android Java/Gradle project includes shared ambulance phrase assets, 21 pre-generated local Piper WAVs (1.4 MB total), home/Quick Questions/Yes-No/in-memory Handoff. Free Conversation only uses `createOnDeviceSpeechRecognizer`, already-downloaded ML Kit models, and a non-network embedded TTS voice; model provisioning is an explicit connected setup. It reports missing capabilities and keeps text visible. Android structured extraction is intentionally unavailable; no facts are invented. **Android source has not yet compiled because SDK/Gradle are absent.** Tests before commit: 118 Python passed/2 skipped, 3 frontend passed, frontend build passed. This commit is a recoverable source milestone, not an APK validation.
 - New plan Phase 10: official Android command-line tools SHA-256 verified, API 35/build-tools/adb installed under projectless `work/android-sdk`; official Gradle 8.9 SHA-256 verified under `work/gradle-dist`. The Gradle wrapper JAR checksum also matched Gradle's published checksum. Debug APK compiled and Android lint passed after replacing an API-33-only read call. `:app:testDebugUnitTest` had NO-SOURCE; Python Android asset tests passed in the 118-test run. APK is 73,414,450 bytes at repo `dist/FieldTalk-debug.apk` and projectless `outputs/FieldTalk-debug.apk`, SHA-256 `C5FF203D07ED142B484D3A167B68E45702584FBCD69EDEB7DA97A02436FCB5AF`. Signature verification passed with APK v2; archive contains 4 phrase JSON and 21 WAV assets. No emulator or physical phone verification yet.
 - New plan Phase 11: `adb devices -l` found no attached device. Isolated SDK has no emulator/system image. `aapt` confirmed APK package, min/target API, launcher, and two permissions plus ML Kit's merged dependencies. Android source has no WebView or laptop backend call. `docs/ANDROID_VALIDATION.md` records exact build/static results, unverified runtime behavior, and device-install/manual-check commands.
+- New plan Phase 12: `docs/FINAL_VALIDATION.md` records final results. Full Python suite 118 passed/2 skipped, frontend 3 passed/build passed, four real local synthetic WAV API directions plus EN/ZH/RU Quick Question WAV passed, browser Quick/Yes-No/responsive checks passed, prior controlled-result Handoff browser check passed, Android assemble/lint/signature/hash passed. No Android emulator/phone, physical Airplane Mode, or real-microphone validation was possible.
 
 - The emergency frontend redesign and its audio cache fix are committed and pushed.
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
@@ -40,7 +41,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 ## Unfinished task and exact next action
 
-Start Phase 12: final full-project validation without adding features. Run frontend tests/build, full backend tests, API samples for EN↔ZH and RU↔EN, Quick Questions, browser Yes/No/Handoff as feasible, Android build/lint/asset/signature checks, and clean Git status. Record actual results in `docs/FINAL_VALIDATION.md`, commit and push only to `origin backup/codex-full-stack`. Do not claim Android runtime or physical Airplane Mode verification. Human review and real microphone checks remain pending.
+No automated phase remains. The next action for the team is to install `dist/FieldTalk-debug.apk` on an Android 12+ phone using the commands in `docs/ANDROID_VALIDATION.md`, run its five manual workflow checks and the conditional offline conversation test, then review Russian wording with a native speaker. Also rehearse the Windows web fallback with a real microphone in physical Airplane Mode. Record any found defects in follow-up commits; do not mark human review complete without an actual reviewer.
 
 ## Continue commands (PowerShell)
 
