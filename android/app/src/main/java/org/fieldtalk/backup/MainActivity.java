@@ -65,6 +65,9 @@ public final class MainActivity extends Activity {
     private String lastTranslation;
     private boolean lastStatementAdded;
     private final ArrayList<PatientStatement> statements = new ArrayList<>();
+    private String asrState = "Loading", translationState = "Loading", ttsState = "Loading";
+    private String systemMessage = "Checking local capabilities…";
+    private TextView asrStatusView, translationStatusView, ttsStatusView, systemMessageView;
 
     private static final class PatientStatement {
         final String original, translation, language;
@@ -83,7 +86,10 @@ public final class MainActivity extends Activity {
             setContentView(failure);
             return;
         }
-        tts = new TextToSpeech(this, status -> ttsReady = status == TextToSpeech.SUCCESS);
+        tts = new TextToSpeech(this, status -> {
+            ttsReady = status == TextToSpeech.SUCCESS;
+            refreshTtsStatus();
+        });
         showHome();
     }
 
@@ -98,6 +104,7 @@ public final class MainActivity extends Activity {
 
     private void screen(String name, String subtitle) {
         currentScreen = name;
+        asrStatusView = translationStatusView = ttsStatusView = systemMessageView = null;
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(PALE);
@@ -110,6 +117,80 @@ public final class MainActivity extends Activity {
         label("FieldTalk", 24, INK, true);
         label(subtitle, 13, MUTED, false);
         space(28);
+    }
+
+    private void systemStatusArea() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(14), dp(12), dp(14), dp(10));
+        panel.setBackground(background(Color.WHITE, Color.rgb(207, 221, 230)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.bottomMargin = dp(20);
+        content.addView(panel, params);
+        TextView heading = new TextView(this);
+        heading.setText("LOCAL MODEL STATUS");
+        heading.setTextColor(MUTED);
+        heading.setTextSize(12);
+        heading.setTypeface(null, Typeface.BOLD);
+        panel.addView(heading);
+        asrStatusView = statusRow(panel);
+        translationStatusView = statusRow(panel);
+        ttsStatusView = statusRow(panel);
+        systemMessageView = new TextView(this);
+        systemMessageView.setTextColor(MUTED);
+        systemMessageView.setTextSize(13);
+        systemMessageView.setPadding(0, dp(8), 0, 0);
+        panel.addView(systemMessageView);
+        renderSystemStatus();
+    }
+
+    private TextView statusRow(LinearLayout panel) {
+        TextView row = new TextView(this);
+        row.setTextSize(15);
+        row.setTextColor(INK);
+        row.setPadding(0, dp(5), 0, dp(5));
+        panel.addView(row);
+        return row;
+    }
+
+    private void renderSystemStatus() {
+        if (asrStatusView == null) return;
+        asrStatusView.setText("ASR                 " + asrState);
+        translationStatusView.setText("Translation      " + translationState);
+        ttsStatusView.setText("TTS                 " + ttsState);
+        systemMessageView.setText(systemMessage);
+    }
+
+    private void refreshTtsStatus() {
+        ttsState = "Error";
+        if (ttsReady && tts != null) {
+            Set<Voice> voices = tts.getVoices();
+            if (voices != null) for (Voice voice : voices) {
+                if (!voice.isNetworkConnectionRequired() && target.equals(voice.getLocale().getLanguage())) {
+                    ttsState = "Ready";
+                    break;
+                }
+            }
+        }
+        renderSystemStatus();
+    }
+
+    private void refreshTranslationStatus() {
+        String from = TranslateLanguage.fromLanguageTag(source);
+        String to = TranslateLanguage.fromLanguageTag(target);
+        translationState = "Loading";
+        renderSystemStatus();
+        if (from == null || to == null) { translationState = "Error"; renderSystemStatus(); return; }
+        RemoteModelManager.getInstance().getDownloadedModels(TranslateRemoteModel.class)
+            .addOnSuccessListener(models -> {
+                boolean haveSource = false, haveTarget = false;
+                for (TranslateRemoteModel model : models) {
+                    if (from.equals(model.getLanguage())) haveSource = true;
+                    if (to.equals(model.getLanguage())) haveTarget = true;
+                }
+                translationState = haveSource && haveTarget ? "Ready" : "Error";
+                renderSystemStatus();
+            }).addOnFailureListener(error -> { translationState = "Error"; renderSystemStatus(); });
     }
 
     private TextView label(String text, int size, int color, boolean bold) {
@@ -288,8 +369,12 @@ public final class MainActivity extends Activity {
     private void showConversation() {
         screen("conversation", "Free Conversation · local capability check");
         label("Speak, then show the result.", 28, INK, true);
-        note("This works only when the device has on-device speech recognition for " + languageName(source)
-            + ", downloaded local translation models, and an embedded " + languageName(target) + " voice. No cloud inference is used.");
+        systemStatusArea();
+        asrState = SpeechRecognizer.isOnDeviceRecognitionAvailable(this) ? "Ready" : "Error";
+        systemMessage = asrState.equals("Error") ? "Local speech recognition unavailable. Use Quick Questions." : "Ready to record a short statement.";
+        refreshTtsStatus();
+        refreshTranslationStatus();
+        renderSystemStatus();
         button("PREPARE TRANSLATION MODELS · CONNECTED SETUP", false, this::prepareModels);
         button("RECORD PATIENT SPEECH", true, this::startRecognition);
         note("If any stage is missing, use Quick Questions or Yes / No. Russian phrases still need native-speaker review.");
@@ -303,6 +388,7 @@ public final class MainActivity extends Activity {
             .setMessage("Download local translation models over Wi-Fi for " + languageName(source) + " and " + languageName(target) + "? This setup needs a connection; later inference is local.")
             .setNegativeButton("CANCEL", null)
             .setPositiveButton("DOWNLOAD", (dialog, which) -> {
+                translationState = "Loading";
                 showError("Downloading local translation models…");
                 RemoteModelManager manager = RemoteModelManager.getInstance();
                 DownloadConditions conditions = new DownloadConditions.Builder().requireWifi().build();
@@ -310,16 +396,17 @@ public final class MainActivity extends Activity {
                 TranslateRemoteModel targetModel = new TranslateRemoteModel.Builder(to).build();
                 manager.download(sourceModel, conditions).addOnSuccessListener(ignored ->
                     manager.download(targetModel, conditions).addOnSuccessListener(done ->
-                        showError("Local translation models ready. Free Conversation can be tried offline."))
-                        .addOnFailureListener(error -> showError("Target model unavailable. Connect to Wi-Fi and retry setup.")))
-                    .addOnFailureListener(error -> showError("Source model unavailable. Connect to Wi-Fi and retry setup."));
+                        { translationState = "Ready"; showError("Local translation models ready. Free Conversation can be tried offline."); })
+                        .addOnFailureListener(error -> { translationState = "Error"; showError("Target model unavailable. Connect to Wi-Fi and retry setup."); }))
+                    .addOnFailureListener(error -> { translationState = "Error"; showError("Source model unavailable. Connect to Wi-Fi and retry setup."); });
             }).show();
     }
 
-    private void showError(String message) { note(message); }
+    private void showError(String message) { systemMessage = message; renderSystemStatus(); }
 
     private void startRecognition() {
         if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
+            asrState = "Error";
             showError("On-device speech recognition unavailable. Use Quick Questions."); return;
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -328,17 +415,18 @@ public final class MainActivity extends Activity {
         if (recognizer != null) recognizer.destroy();
         recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
         recognizer.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) { showError("Listening… Speak one short patient statement."); }
+            @Override public void onReadyForSpeech(Bundle params) { asrState = "Loading"; showError("Listening… Speak one short patient statement."); }
             @Override public void onBeginningOfSpeech() { }
             @Override public void onRmsChanged(float rmsdB) { }
             @Override public void onBufferReceived(byte[] buffer) { }
             @Override public void onEndOfSpeech() { showError("Recognizing locally…"); }
-            @Override public void onError(int error) { showError("Speech unclear or on-device language unavailable. Ask the patient to repeat."); }
+            @Override public void onError(int error) { asrState = "Error"; showError("Speech unclear or on-device language unavailable. Ask the patient to repeat."); }
             @Override public void onResults(Bundle results) {
                 ArrayList<String> recognized = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (recognized == null || recognized.isEmpty() || recognized.get(0).trim().isEmpty()) {
-                    showError("Speech unclear. Ask the patient to repeat."); return;
+                    asrState = "Error"; showError("Speech unclear. Ask the patient to repeat."); return;
                 }
+                asrState = "Ready";
                 translateLocally(recognized.get(0).trim());
             }
             @Override public void onPartialResults(Bundle partialResults) { }
@@ -362,6 +450,7 @@ public final class MainActivity extends Activity {
         String from = TranslateLanguage.fromLanguageTag(source);
         String to = TranslateLanguage.fromLanguageTag(target);
         if (from == null || to == null) { showError("Unsupported translation language."); return; }
+        translationState = "Loading";
         showError("Checking installed translation models…");
         RemoteModelManager.getInstance().getDownloadedModels(TranslateRemoteModel.class)
             .addOnSuccessListener(models -> {
@@ -371,7 +460,8 @@ public final class MainActivity extends Activity {
                     if (to.equals(model.getLanguage())) haveTarget = true;
                 }
                 if (!haveSource || !haveTarget) {
-                    showError("Translation unavailable offline. Prepare both local models while connected. Original: " + original);
+                    translationState = "Error";
+                    showOriginalOnly(original, "Translation unavailable offline. Prepare both local models while connected.");
                     return;
                 }
                 TranslatorOptions options = new TranslatorOptions.Builder().setSourceLanguage(from).setTargetLanguage(to).build();
@@ -379,25 +469,37 @@ public final class MainActivity extends Activity {
                 showError("Translating locally…");
                 translator.translate(original).addOnSuccessListener(translated -> {
                     translator.close();
+                    translationState = "Ready";
                     showConversationResult(original, translated);
                 }).addOnFailureListener(error -> {
                     translator.close();
-                    showError("Translation unavailable. Original: " + original);
+                    translationState = "Error";
+                    showOriginalOnly(original, "Translation unavailable. The original remains visible.");
                 });
-            }).addOnFailureListener(error -> showError("Cannot verify local translation models. Original: " + original));
+            }).addOnFailureListener(error -> { translationState = "Error"; showOriginalOnly(original, "Cannot verify local translation models."); });
+    }
+
+    private void showOriginalOnly(String original, String message) {
+        screen("result", "Free Conversation · translation unavailable");
+        systemStatusArea();
+        showError(message);
+        label("ORIGINAL · " + languageName(source).toUpperCase(Locale.ROOT), 13, MUTED, true);
+        label(original, 22, INK, true);
+        button("RECORD AGAIN", false, this::showConversation);
     }
 
     private void showConversationResult(String original, String translated) {
         lastOriginal = original; lastTranslation = translated; lastStatementAdded = false;
         screen("result", "Free Conversation · patient-stated result");
+        systemStatusArea();
         label("ORIGINAL · " + languageName(source).toUpperCase(Locale.ROOT), 13, MUTED, true);
         label(original, 22, INK, true);
         space(14);
         label("TRANSLATION · " + languageName(target).toUpperCase(Locale.ROOT), 13, MUTED, true);
         label(translated, 30, INK, true);
-        note("Important information extraction is not available in this Android prototype. Confirm the original and translation with the patient.");
+        showError("Confirm the original and translation with the patient.");
         boolean spoken = speakOffline(translated, target);
-        if (!spoken) note("Audio unavailable. The translated text remains visible.");
+        if (!spoken) { ttsState = "Error"; showError("Audio unavailable. The translated text remains visible."); }
         button("PLAY TRANSLATION", true, () -> {
             if (!speakOffline(lastTranslation, target)) showError("Embedded voice unavailable. Read the translation on screen.");
         });

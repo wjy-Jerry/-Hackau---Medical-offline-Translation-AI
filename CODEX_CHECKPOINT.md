@@ -90,3 +90,14 @@ $env:PATH='C:\Windows\System32;D:\java\bin;' + $env:PATH
 
 - No backend or frontend server is currently running. Start backend with `& '.\.venv\Scripts\python.exe' -m uvicorn backend.main:app --host 127.0.0.1 --port 8000` from the repository root.
 - Start frontend in another PowerShell terminal after adding the portable Node directory above to `PATH`: `Set-Location frontend; npm run dev`.
+
+## Android phone follow-up (2026-10-03)
+
+- Current branch: `backup/codex-full-stack`. Original upstream/team repository remains untouched.
+- Phone feedback: Quick Questions and translation-model preparation work; Free Conversation reports no on-device recognition service.
+- Diagnosis: Android currently relies solely on `SpeechRecognizer.isOnDeviceRecognitionAvailable()` and `createOnDeviceSpeechRecognizer()`. Manifest already has microphone permission and Android 11+ `RecognitionService` visibility query. Without ADB/logcat from the phone, the exact device-side cause cannot be distinguished, but a missing manifest declaration is ruled out. An app-controlled local ASR path is required.
+- Stable status UX phase: Free Conversation and result screens now have one compact ASR/Translation/TTS status panel. Repeated diagnostic messages update the panel in place; original speech stays in the patient-content area even if translation fails. Android `assembleDebug` and `lintDebug` passed. This phase's commit is the latest successful commit after pushing.
+- Current phase: app-controlled multilingual Android ASR, followed by extraction and Handoff integration.
+- Exact next action: acquire a pinned whisper.cpp Android native source and multilingual quantized model, then implement `AudioRecord` PCM capture and native local transcription for selected `en`, `zh`, `ru`. Keep model binaries Git ignored but bundle into the distributable debug APK. Preserve the previous stable APK at `dist/FieldTalk-debug.apk` until the new APK passes build/tests/lint/signing checks.
+- Known blocker: no ADB-connected physical phone in this environment; do not claim Airplane Mode verification. The Android toolchain needs an escalated Gradle run because its plugin writes outside the sandbox.
+- Restart: no services are running. Android build environment: `JAVA_HOME=D:\java`, `ANDROID_HOME=C:\Users\19573\Documents\Codex\2026-10-02\https-github-com-rrrrrrl-hackau-medical\work\android-sdk`, `GRADLE_USER_HOME=C:\Users\19573\Documents\Codex\2026-10-02\https-github-com-rrrrrrl-hackau-medical\work\gradle-cache`; invoke `...\work\gradle-dist\gradle-8.9\bin\gradle.bat -p .\android :app:assembleDebug :app:lintDebug --no-daemon --console=plain`.
