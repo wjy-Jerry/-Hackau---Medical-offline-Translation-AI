@@ -5,7 +5,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
 - Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
-- Current phase: new 12-phase autonomous plan, Phase 7 complete; Phase 8 is next.
+- Current phase: new 12-phase autonomous plan, Phase 8 architecture complete; Phase 9 is next.
 
 ## Completed tasks
 
@@ -17,6 +17,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - New plan Phase 5: home copy emphasizes critical offline communication; Quick Questions remain the visually primary action, Handoff is visible on home. Actual Chrome screenshots at 1200/768/390 px had no horizontal overflow. Browser handoff flow used a real RU→EN local API response from the Russian WAV fixture with the microphone request substituted in Chrome because headless microphone capture returned no speech. The card now displays the original Russian and English translation even when conservative extraction finds no structured RU fields. Checks: 3 frontend tests, 50 API tests, frontend build, and browser layout/flow passed. The simulated browser transport is not a real microphone validation.
 - New plan Phase 6: `docs/EXHIBITION_DEMO.md` provides a 60–90 second live flow, suggested sentences, and honest microphone/backend fallback. Documentation commands match the current repo; no app code changed.
 - New plan Phase 7: `docs/PITCH_POSITIONING.md` describes the ambulance MVP, verified prototype boundaries, comparative positioning without named-competitor claims, and candidate future domain packs. No app code changed.
+- New plan Phase 8: `docs/ANDROID_ARCHITECTURE.md` compares the desktop pipeline with a standalone native Android app, documents measured desktop model sizes, candidate on-device recognizer/ML Kit translation/embedded TTS, conditional offline capability, build requirements, and risks using official sources. No Android code or SDK has been installed yet.
 
 - The emergency frontend redesign and its audio cache fix are committed and pushed.
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
@@ -36,7 +37,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 ## Unfinished task and exact next action
 
-Start Phase 8 of the user's new 12-phase plan: inspect current React/FastAPI/faster-whisper/Argos/Piper architecture and research current Android official documentation. Create `docs/ANDROID_ARCHITECTURE.md` covering desktop and Android designs, library changes, local model options/sizes, device requirements, and risks before Android code. Then proceed to Phase 9 in strict order. Human review, real microphone, and physical Airplane Mode checks remain pending.
+Start Phase 9 of the user's new 12-phase plan: implement a separate native Android project with bundled phrase pack and local question audio, Quick Questions, Yes / No, and in-memory Handoff. Make reasonable guarded attempts at on-device ASR/translation/TTS but label any missing capability honestly. First stable native milestone must be tested, committed, and pushed before long SDK/model operations. Then attempt Phase 10 debug APK build. Human review, real microphone, and physical Airplane Mode checks remain pending.
 
 ## Continue commands (PowerShell)
 
