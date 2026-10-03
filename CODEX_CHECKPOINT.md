@@ -5,7 +5,16 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
 - Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
-- Current phase: new 12-phase autonomous plan, Phase 12 final validation complete; remaining checks require a real device, microphone, and human language review.
+- Current phase: Android phone follow-up implementation and version-2 debug APK delivery complete. The exact unfinished task is a physical Airplane Mode test of the new APK on the user's phone, plus human review of Russian wording.
+
+## Latest Android delivery state
+
+- Previous stable APK is preserved at `dist/FieldTalk-debug.apk`, SHA-256 `C5FF203D07ED142B484D3A167B68E45702584FBCD69EDEB7DA97A02436FCB5AF`.
+- New APK is `dist/FieldTalk-debug-whisper.apk` (also copied to the projectless `outputs/` folder), versionCode 2 / versionName 0.2.0, 88,080,726 bytes, SHA-256 `56FD0E52481624B1B9DA3A5B0FD55B99E986A284E0D87A84946C611A826DB093`. APK v2 signature passed and its certificate matches the previous APK. Bundled model and arm64 JNI library are present; exact model bytes and SHA-256 were verified inside the APK.
+- Current source has app-controlled whisper.cpp ASR for EN/ZH/RU, local ML Kit translation, embedded-voice TTS checks, one in-place system status panel, explicit-only critical information extraction, and responder-confirmed Handoff. Android 6 JVM tests, build, and lint passed. No new APK runtime or Airplane Mode claim can be made: ADB reported no connected phone.
+- Exact next action: install the **new** APK on the real phone, prepare required translation models and embedded voices while online, then enable Airplane Mode, force-stop/reopen, and perform the EN→ZH, ZH→EN, RU→EN, Quick Questions, and Add to Handoff checks in `docs/ANDROID_VALIDATION.md`. Record actual transcript, playback, timing, device/Android version, and any logcat errors. If a defect is found, fix it in a new stable phase and push only to `origin backup/codex-full-stack`.
+- Continue commands: `Set-Location 'C:\Users\19573\Documents\Codex\FieldTalk-Backup'`; `$env:GIT_CONFIG_GLOBAL='NUL'`; `& 'C:\Program Files\Git\cmd\git.exe' status --short --branch`; `Get-Content .\CODEX_CHECKPOINT.md -Raw -Encoding UTF8`; `Get-Content .\docs\ANDROID_VALIDATION.md -Raw -Encoding UTF8`. To rebuild after source changes, use the portable Android environment and Gradle command given below; the Git-ignored model is already present locally and must not be redownloaded.
+- Services/processes to restart: none for Android; install/reopen the APK on the phone. The Windows backend and frontend servers are not required for this Android APK.
 
 ## Completed tasks
 
