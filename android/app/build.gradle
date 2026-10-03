@@ -12,6 +12,10 @@ android {
         targetSdk 35
         versionCode 1
         versionName '0.1.0'
+        ndk { abiFilters 'arm64-v8a' }
+        externalNativeBuild {
+            cmake { arguments '-DWHISPER_BUILD_TESTS=OFF', '-DWHISPER_BUILD_EXAMPLES=OFF', '-DGGML_NATIVE=OFF' }
+        }
     }
 
     sourceSets {
@@ -22,8 +26,34 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    ndkVersion '27.0.12077973'
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
+        }
+    }
 }
 
 dependencies {
     implementation 'com.google.mlkit:translate:17.0.3'
 }
+
+tasks.register('verifyBundledAsrModel') {
+    doLast {
+        def model = file('src/main/assets/models/ggml-base-q5_1.bin')
+        def expected = '422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898'
+        if (!model.isFile()) {
+            throw new GradleException('Bundled ASR model missing. Run scripts/prepare_android_asr_model.ps1 from the repository root.')
+        }
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        model.withInputStream { stream ->
+            byte[] buffer = new byte[32768]
+            int count
+            while ((count = stream.read(buffer)) != -1) digest.update(buffer, 0, count)
+        }
+        def actual = digest.digest().encodeHex().toString()
+        if (actual != expected) throw new GradleException('Bundled ASR model checksum mismatch: ' + actual)
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyBundledAsrModel' }

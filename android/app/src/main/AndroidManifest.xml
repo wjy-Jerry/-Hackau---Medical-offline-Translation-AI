@@ -3,7 +3,6 @@
     <!-- Used only for an explicit, connected setup of ML Kit's on-device models. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <queries>
-        <intent><action android:name="android.speech.RecognitionService" /></intent>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
     <application android:label="FieldTalk" android:theme="@android:style/Theme.Material.Light.NoActionBar"

@@ -1,5 +1,7 @@
 # Android feasibility and architecture (2026-10-03)
 
+**2026-10-03 implementation update:** The phone exposed the limitation described below: its local system recognizer was unavailable. The current Android source now uses bundled, Git-ignored multilingual Whisper `base-q5_1` (59,707,625 bytes) through pinned whisper.cpp 1.8.0, JNI, and 16 kHz PCM capture. It no longer calls Android `SpeechRecognizer` or a cloud speech service. The model is included in locally built APKs only after a checksum-checked setup; Gradle refuses a build without it. The installed phone has not yet been tested with this new APK. The rest of this document records the earlier feasibility decision and should be read as historical context.
+
 ## 1. Current desktop architecture
 
 The recoverable Windows fallback is React/Vite calling local FastAPI. `/process_audio` runs multilingual faster-whisper `base`, Argos translation, conservative English/Chinese extraction, and Piper speech; Quick Questions use a local phrase pack and Piper. The downloaded desktop assets measured on this workspace are about **141 MB** for the faster-whisper model, **538 MB** for four Argos package directories (including tokenizers), and **181 MB** for three Piper ONNX voices. These are measured local files, not expected Android package sizes. The Python/CTranslate2/Argos/Piper stack is not an Android app and cannot be made standalone by putting the website in a WebView.

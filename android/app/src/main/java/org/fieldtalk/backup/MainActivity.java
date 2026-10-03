@@ -3,16 +3,15 @@ package org.fieldtalk.backup;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaPlayer;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
 import android.view.Gravity;
@@ -34,9 +33,14 @@ import com.google.mlkit.nl.translate.TranslatorOptions;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
+import java.security.MessageDigest;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** Standalone offline emergency phrase workflow; conversation is capability-gated. */
 public final class MainActivity extends Activity {
@@ -53,7 +57,12 @@ public final class MainActivity extends Activity {
     private PhrasePack pack;
     private LinearLayout content;
     private MediaPlayer player;
-    private SpeechRecognizer recognizer;
+    private final ExecutorService speechWorker = Executors.newSingleThreadExecutor();
+    private volatile long modelContext;
+    private volatile boolean modelLoading;
+    private volatile boolean recording;
+    private Button recordButton;
+    private int screenVersion;
     private TextToSpeech tts;
     private boolean ttsReady;
     private String source = "en";
@@ -103,6 +112,8 @@ public final class MainActivity extends Activity {
     }
 
     private void screen(String name, String subtitle) {
+        screenVersion++;
+        if (!"conversation".equals(name)) recording = false;
         currentScreen = name;
         asrStatusView = translationStatusView = ttsStatusView = systemMessageView = null;
         ScrollView scroll = new ScrollView(this);
@@ -370,13 +381,14 @@ public final class MainActivity extends Activity {
         screen("conversation", "Free Conversation · local capability check");
         label("Speak, then show the result.", 28, INK, true);
         systemStatusArea();
-        asrState = SpeechRecognizer.isOnDeviceRecognitionAvailable(this) ? "Ready" : "Error";
-        systemMessage = asrState.equals("Error") ? "Local speech recognition unavailable. Use Quick Questions." : "Ready to record a short statement.";
+        asrState = modelContext != 0 ? "Ready" : "Loading";
+        systemMessage = modelContext != 0 ? "Ready to record a short statement." : "Loading bundled speech model…";
         refreshTtsStatus();
         refreshTranslationStatus();
         renderSystemStatus();
+        prepareAsr();
         button("PREPARE TRANSLATION MODELS · CONNECTED SETUP", false, this::prepareModels);
-        button("RECORD PATIENT SPEECH", true, this::startRecognition);
+        recordButton = button("RECORD PATIENT SPEECH", true, this::startRecognition);
         note("If any stage is missing, use Quick Questions or Yes / No. Russian phrases still need native-speaker review.");
     }
 
@@ -404,38 +416,132 @@ public final class MainActivity extends Activity {
 
     private void showError(String message) { systemMessage = message; renderSystemStatus(); }
 
+    private void prepareAsr() {
+        if (modelContext != 0 || modelLoading) return;
+        modelLoading = true;
+        asrState = "Loading";
+        renderSystemStatus();
+        speechWorker.execute(() -> {
+            long loaded = 0;
+            try { loaded = WhisperBridge.nativeLoad(verifiedModelPath()); }
+            catch (Exception | LinkageError error) { android.util.Log.e("FieldTalk", "Local ASR initialization failed", error); }
+            modelContext = loaded;
+            modelLoading = false;
+            runOnUiThread(() -> {
+                asrState = modelContext != 0 ? "Ready" : "Error";
+                showError(modelContext != 0 ? "Local speech model ready." : "Local speech model unavailable. Use Quick Questions.");
+            });
+        });
+    }
+
+    private String verifiedModelPath() throws Exception {
+        final String name = "ggml-base-q5_1.bin";
+        final String expected = "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898";
+        File model = new File(getFilesDir(), name);
+        if (model.isFile() && expected.equals(sha256(model))) return model.getAbsolutePath();
+        File partial = new File(getFilesDir(), name + ".part");
+        try (InputStream input = getAssets().open("models/" + name);
+             FileOutputStream output = new FileOutputStream(partial)) {
+            byte[] buffer = new byte[32768]; int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+        }
+        if (!expected.equals(sha256(partial))) throw new IOException("Bundled speech model checksum mismatch");
+        if (model.exists() && !model.delete()) throw new IOException("Cannot replace old speech model");
+        if (!partial.renameTo(model)) throw new IOException("Cannot install bundled speech model");
+        return model.getAbsolutePath();
+    }
+
+    private String sha256(File file) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream input = new java.io.FileInputStream(file)) {
+            byte[] buffer = new byte[32768]; int count;
+            while ((count = input.read(buffer)) != -1) digest.update(buffer, 0, count);
+        }
+        StringBuilder hex = new StringBuilder(64);
+        for (byte value : digest.digest()) hex.append(String.format(Locale.ROOT, "%02x", value & 0xff));
+        return hex.toString();
+    }
+
     private void startRecognition() {
-        if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
-            asrState = "Error";
-            showError("On-device speech recognition unavailable. Use Quick Questions."); return;
+        if (recording) {
+            recording = false;
+            showError("Recognizing locally…");
+            return;
+        }
+        if (modelContext == 0) {
+            showError(modelLoading ? "Speech model is loading. Please wait." : "Local speech model unavailable. Use Quick Questions.");
+            return;
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_PERMISSION); return;
         }
-        if (recognizer != null) recognizer.destroy();
-        recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
-        recognizer.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) { asrState = "Loading"; showError("Listening… Speak one short patient statement."); }
-            @Override public void onBeginningOfSpeech() { }
-            @Override public void onRmsChanged(float rmsdB) { }
-            @Override public void onBufferReceived(byte[] buffer) { }
-            @Override public void onEndOfSpeech() { showError("Recognizing locally…"); }
-            @Override public void onError(int error) { asrState = "Error"; showError("Speech unclear or on-device language unavailable. Ask the patient to repeat."); }
-            @Override public void onResults(Bundle results) {
-                ArrayList<String> recognized = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                if (recognized == null || recognized.isEmpty() || recognized.get(0).trim().isEmpty()) {
-                    asrState = "Error"; showError("Speech unclear. Ask the patient to repeat."); return;
-                }
-                asrState = "Ready";
-                translateLocally(recognized.get(0).trim());
+        recording = true;
+        final String spokenLanguage = source;
+        final Button button = recordButton;
+        final int requestScreen = screenVersion;
+        button.setText("STOP RECORDING");
+        showError("Listening… Tap Stop Recording when the patient finishes.");
+        speechWorker.execute(() -> {
+            float[] samples = captureSpeech();
+            runOnUiThread(() -> {
+                button.setText("RECORD PATIENT SPEECH");
+                button.setEnabled(false);
+                if (samples != null && requestScreen == screenVersion) showError("Recognizing locally…");
+            });
+            String text = null;
+            try {
+                if (samples != null) text = WhisperBridge.nativeTranscribe(modelContext, samples, spokenLanguage);
+            } catch (Exception | LinkageError error) {
+                android.util.Log.e("FieldTalk", "Local transcription failed", error);
             }
-            @Override public void onPartialResults(Bundle partialResults) { }
-            @Override public void onEvent(int eventType, Bundle params) { }
+            final String result = text == null ? "" : text.trim();
+            runOnUiThread(() -> {
+                button.setEnabled(true);
+                if (requestScreen != screenVersion) return;
+                if (result.isEmpty()) { showError("Speech could not be recognized. Please repeat."); return; }
+                translateLocally(result);
+            });
         });
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, source.equals("zh") ? "zh-CN" : source.equals("ru") ? "ru-RU" : "en-US");
-        recognizer.startListening(intent);
+    }
+
+    private float[] captureSpeech() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            recording = false;
+            return null;
+        }
+        final int sampleRate = 16000;
+        int minBuffer = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        if (minBuffer <= 0) { recording = false; return null; }
+        AudioRecord microphone = null;
+        try {
+            microphone = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, sampleRate,
+                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minBuffer, 4096));
+            if (microphone.getState() != AudioRecord.STATE_INITIALIZED) return null;
+            float[] samples = new float[12 * sampleRate];
+            short[] chunk = new short[2048];
+            int used = 0; double energy = 0;
+            microphone.startRecording();
+            while (recording && used < samples.length) {
+                int count = microphone.read(chunk, 0, Math.min(chunk.length, samples.length - used));
+                if (count <= 0) break;
+                for (int i = 0; i < count; i++) {
+                    float value = chunk[i] / 32768f;
+                    samples[used++] = value;
+                    energy += value * value;
+                }
+            }
+            if (used < sampleRate || Math.sqrt(energy / used) < 0.002) return null;
+            return Arrays.copyOf(samples, used);
+        } catch (RuntimeException error) {
+            android.util.Log.e("FieldTalk", "Microphone capture failed", error);
+            return null;
+        } finally {
+            recording = false;
+            if (microphone != null) {
+                try { microphone.stop(); } catch (IllegalStateException ignored) { }
+                microphone.release();
+            }
+        }
     }
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
@@ -447,6 +553,7 @@ public final class MainActivity extends Activity {
     }
 
     private void translateLocally(String original) {
+        final int requestScreen = screenVersion;
         String from = TranslateLanguage.fromLanguageTag(source);
         String to = TranslateLanguage.fromLanguageTag(target);
         if (from == null || to == null) { showError("Unsupported translation language."); return; }
@@ -454,6 +561,7 @@ public final class MainActivity extends Activity {
         showError("Checking installed translation models…");
         RemoteModelManager.getInstance().getDownloadedModels(TranslateRemoteModel.class)
             .addOnSuccessListener(models -> {
+                if (requestScreen != screenVersion) return;
                 boolean haveSource = false, haveTarget = false;
                 for (TranslateRemoteModel model : models) {
                     if (from.equals(model.getLanguage())) haveSource = true;
@@ -469,14 +577,20 @@ public final class MainActivity extends Activity {
                 showError("Translating locally…");
                 translator.translate(original).addOnSuccessListener(translated -> {
                     translator.close();
+                    if (requestScreen != screenVersion) return;
                     translationState = "Ready";
                     showConversationResult(original, translated);
                 }).addOnFailureListener(error -> {
                     translator.close();
+                    if (requestScreen != screenVersion) return;
                     translationState = "Error";
                     showOriginalOnly(original, "Translation unavailable. The original remains visible.");
                 });
-            }).addOnFailureListener(error -> { translationState = "Error"; showOriginalOnly(original, "Cannot verify local translation models."); });
+            }).addOnFailureListener(error -> {
+                if (requestScreen != screenVersion) return;
+                translationState = "Error";
+                showOriginalOnly(original, "Cannot verify local translation models.");
+            });
     }
 
     private void showOriginalOnly(String original, String message) {
@@ -531,7 +645,9 @@ public final class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         stopQuestionAudio();
-        if (recognizer != null) recognizer.destroy();
+        recording = false;
+        speechWorker.execute(() -> { if (modelContext != 0) WhisperBridge.nativeClose(modelContext); });
+        speechWorker.shutdown();
         if (tts != null) tts.shutdown();
         super.onDestroy();
     }
