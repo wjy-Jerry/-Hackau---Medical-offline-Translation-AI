@@ -37,6 +37,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.security.MessageDigest;
 import java.util.concurrent.ExecutorService;
@@ -72,6 +74,8 @@ public final class MainActivity extends Activity {
     private String selectedMode;
     private String lastOriginal;
     private String lastTranslation;
+    private Map<String, String> lastFacts = new LinkedHashMap<>();
+    private boolean recordingPatient = true;
     private boolean lastStatementAdded;
     private final ArrayList<PatientStatement> statements = new ArrayList<>();
     private String asrState = "Loading", translationState = "Loading", ttsState = "Loading";
@@ -80,8 +84,10 @@ public final class MainActivity extends Activity {
 
     private static final class PatientStatement {
         final String original, translation, language;
+        final Map<String, String> facts;
         PatientStatement(String original, String translation, String language) {
             this.original = original; this.translation = translation; this.language = language;
+            this.facts = CriticalInformation.extract(original, language);
         }
     }
 
@@ -95,10 +101,10 @@ public final class MainActivity extends Activity {
             setContentView(failure);
             return;
         }
-        tts = new TextToSpeech(this, status -> {
+        tts = new TextToSpeech(this, status -> runOnUiThread(() -> {
             ttsReady = status == TextToSpeech.SUCCESS;
             refreshTtsStatus();
-        });
+        }));
         showHome();
     }
 
@@ -144,9 +150,9 @@ public final class MainActivity extends Activity {
         heading.setTextSize(12);
         heading.setTypeface(null, Typeface.BOLD);
         panel.addView(heading);
-        asrStatusView = statusRow(panel);
-        translationStatusView = statusRow(panel);
-        ttsStatusView = statusRow(panel);
+        asrStatusView = statusRow(panel, "ASR");
+        translationStatusView = statusRow(panel, "Translation");
+        ttsStatusView = statusRow(panel, "TTS");
         systemMessageView = new TextView(this);
         systemMessageView.setTextColor(MUTED);
         systemMessageView.setTextSize(13);
@@ -155,21 +161,31 @@ public final class MainActivity extends Activity {
         renderSystemStatus();
     }
 
-    private TextView statusRow(LinearLayout panel) {
-        TextView row = new TextView(this);
-        row.setTextSize(15);
-        row.setTextColor(INK);
-        row.setPadding(0, dp(5), 0, dp(5));
+    private TextView statusRow(LinearLayout panel, String title) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(6), 0, dp(6));
+        TextView name = new TextView(this);
+        name.setText(title); name.setTextSize(15); name.setTextColor(INK);
+        row.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView state = new TextView(this);
+        state.setTextSize(15); state.setTypeface(null, Typeface.BOLD);
+        row.addView(state);
         panel.addView(row);
-        return row;
+        return state;
     }
 
     private void renderSystemStatus() {
         if (asrStatusView == null) return;
-        asrStatusView.setText("ASR                 " + asrState);
-        translationStatusView.setText("Translation      " + translationState);
-        ttsStatusView.setText("TTS                 " + ttsState);
+        setStatusText(asrStatusView, asrState);
+        setStatusText(translationStatusView, translationState);
+        setStatusText(ttsStatusView, ttsState);
         systemMessageView.setText(systemMessage);
+    }
+
+    private void setStatusText(TextView view, String state) {
+        view.setText(state);
+        view.setTextColor("Ready".equals(state) ? Color.rgb(25, 112, 71) : MUTED);
     }
 
     private void refreshTtsStatus() {
@@ -177,7 +193,7 @@ public final class MainActivity extends Activity {
         if (ttsReady && tts != null) {
             Set<Voice> voices = tts.getVoices();
             if (voices != null) for (Voice voice : voices) {
-                if (!voice.isNetworkConnectionRequired() && target.equals(voice.getLocale().getLanguage())) {
+                if (!voice.isNetworkConnectionRequired() && conversationTo().equals(voice.getLocale().getLanguage())) {
                     ttsState = "Ready";
                     break;
                 }
@@ -250,6 +266,9 @@ public final class MainActivity extends Activity {
         for (int i = 0; i < CODES.length; i++) if (CODES[i].equals(code)) return i;
         return 0;
     }
+
+    private String conversationFrom() { return recordingPatient ? target : source; }
+    private String conversationTo() { return recordingPatient ? source : target; }
 
     private void chooseLanguage(boolean responder) {
         new AlertDialog.Builder(this).setTitle(responder ? "Responder language" : "Patient language")
@@ -344,12 +363,21 @@ public final class MainActivity extends Activity {
 
     private void showHandoff() {
         screen("handoff", "Emergency handoff");
-        label("Patient-stated information.", 29, INK, true);
+        label("PATIENT-STATED INFORMATION", 27, INK, true);
         note("Only information the responder explicitly added. This is not a diagnosis.");
         label("Patient language: " + (statements.isEmpty() ? "Unknown / Not stated" : languageName(statements.get(statements.size() - 1).language)), 16, INK, true);
-        for (String field : new String[]{"Pain location", "Breathing difficulty", "Bleeding", "Loss of consciousness", "Other stated symptom", "Allergy", "Medication"}) {
-            label(field.toUpperCase(Locale.ROOT), 12, MUTED, true);
-            label("Unknown / Not stated", 18, MUTED, false);
+        Map<String, String> confirmed = new LinkedHashMap<>();
+        for (PatientStatement statement : statements) {
+            for (Map.Entry<String, String> entry : statement.facts.entrySet()) {
+                if (!confirmed.containsKey(entry.getKey())) confirmed.put(entry.getKey(), entry.getValue());
+                else if (!confirmed.get(entry.getKey()).contains(entry.getValue()))
+                    confirmed.put(entry.getKey(), confirmed.get(entry.getKey()) + ", " + entry.getValue());
+            }
+        }
+        for (String field : new String[]{"allergy", "medication", "pain_location", "symptom", "breathing_difficulty", "bleeding", "loss_of_consciousness"}) {
+            label(CriticalInformation.label(field).toUpperCase(Locale.ROOT), 12, MUTED, true);
+            label(confirmed.getOrDefault(field, "Unknown / Not stated"), 18,
+                confirmed.containsKey(field) ? INK : MUTED, false);
         }
         if (!statements.isEmpty()) {
             space(12);
@@ -378,8 +406,10 @@ public final class MainActivity extends Activity {
     }
 
     private void showConversation() {
+        recording = false;
         screen("conversation", "Free Conversation · local capability check");
-        label("Speak, then show the result.", 28, INK, true);
+        label("Speak in " + languageName(conversationFrom()) + ".", 28, INK, true);
+        label(recordingPatient ? "Patient → Responder" : "Responder → Patient", 15, MUTED, true);
         systemStatusArea();
         asrState = modelContext != 0 ? "Ready" : "Loading";
         systemMessage = modelContext != 0 ? "Ready to record a short statement." : "Loading bundled speech model…";
@@ -387,8 +417,12 @@ public final class MainActivity extends Activity {
         refreshTranslationStatus();
         renderSystemStatus();
         prepareAsr();
+        button("SWITCH SPEAKER / DIRECTION", false, () -> {
+            recordingPatient = !recordingPatient;
+            showConversation();
+        });
         button("PREPARE TRANSLATION MODELS · CONNECTED SETUP", false, this::prepareModels);
-        recordButton = button("RECORD PATIENT SPEECH", true, this::startRecognition);
+        recordButton = button(recordingPatient ? "RECORD PATIENT SPEECH" : "RECORD RESPONDER SPEECH", true, this::startRecognition);
         note("If any stage is missing, use Quick Questions or Yes / No. Russian phrases still need native-speaker review.");
     }
 
@@ -476,15 +510,16 @@ public final class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_PERMISSION); return;
         }
         recording = true;
-        final String spokenLanguage = source;
+        final String spokenLanguage = conversationFrom();
         final Button button = recordButton;
         final int requestScreen = screenVersion;
         button.setText("STOP RECORDING");
+        asrState = "Loading";
         showError("Listening… Tap Stop Recording when the patient finishes.");
         speechWorker.execute(() -> {
             float[] samples = captureSpeech();
             runOnUiThread(() -> {
-                button.setText("RECORD PATIENT SPEECH");
+                button.setText(recordingPatient ? "RECORD PATIENT SPEECH" : "RECORD RESPONDER SPEECH");
                 button.setEnabled(false);
                 if (samples != null && requestScreen == screenVersion) showError("Recognizing locally…");
             });
@@ -498,7 +533,8 @@ public final class MainActivity extends Activity {
             runOnUiThread(() -> {
                 button.setEnabled(true);
                 if (requestScreen != screenVersion) return;
-                if (result.isEmpty()) { showError("Speech could not be recognized. Please repeat."); return; }
+                if (result.isEmpty()) { asrState = "Error"; showError("Speech could not be recognized. Please repeat."); return; }
+                asrState = "Ready";
                 translateLocally(result);
             });
         });
@@ -554,8 +590,8 @@ public final class MainActivity extends Activity {
 
     private void translateLocally(String original) {
         final int requestScreen = screenVersion;
-        String from = TranslateLanguage.fromLanguageTag(source);
-        String to = TranslateLanguage.fromLanguageTag(target);
+        String from = TranslateLanguage.fromLanguageTag(conversationFrom());
+        String to = TranslateLanguage.fromLanguageTag(conversationTo());
         if (from == null || to == null) { showError("Unsupported translation language."); return; }
         translationState = "Loading";
         showError("Checking installed translation models…");
@@ -597,33 +633,44 @@ public final class MainActivity extends Activity {
         screen("result", "Free Conversation · translation unavailable");
         systemStatusArea();
         showError(message);
-        label("ORIGINAL · " + languageName(source).toUpperCase(Locale.ROOT), 13, MUTED, true);
+        label("ORIGINAL · " + languageName(conversationFrom()).toUpperCase(Locale.ROOT), 13, MUTED, true);
         label(original, 22, INK, true);
         button("RECORD AGAIN", false, this::showConversation);
     }
 
     private void showConversationResult(String original, String translated) {
         lastOriginal = original; lastTranslation = translated; lastStatementAdded = false;
-        screen("result", "Free Conversation · patient-stated result");
+        lastFacts = recordingPatient ? CriticalInformation.extract(original, conversationFrom()) : new LinkedHashMap<>();
+        screen("result", recordingPatient ? "Free Conversation · patient-stated result" : "Free Conversation · responder message");
         systemStatusArea();
-        label("ORIGINAL · " + languageName(source).toUpperCase(Locale.ROOT), 13, MUTED, true);
+        label("ORIGINAL · " + languageName(conversationFrom()).toUpperCase(Locale.ROOT), 13, MUTED, true);
         label(original, 22, INK, true);
         space(14);
-        label("TRANSLATION · " + languageName(target).toUpperCase(Locale.ROOT), 13, MUTED, true);
+        label("TRANSLATION · " + languageName(conversationTo()).toUpperCase(Locale.ROOT), 13, MUTED, true);
         label(translated, 30, INK, true);
-        showError("Confirm the original and translation with the patient.");
-        boolean spoken = speakOffline(translated, target);
+        if (!lastFacts.isEmpty()) {
+            space(12);
+            label("CRITICAL INFORMATION · VERIFY WITH PATIENT", 13, MUTED, true);
+            for (Map.Entry<String, String> fact : lastFacts.entrySet()) {
+                label(CriticalInformation.label(fact.getKey()).toUpperCase(Locale.ROOT), 12, MUTED, true);
+                label(fact.getValue(), 20, INK, true);
+            }
+        }
+        showError(recordingPatient ? "Confirm the original and translation with the patient." : "Check the message and translation before playback.");
+        boolean spoken = speakOffline(translated, conversationTo());
         if (!spoken) { ttsState = "Error"; showError("Audio unavailable. The translated text remains visible."); }
         button("PLAY TRANSLATION", true, () -> {
-            if (!speakOffline(lastTranslation, target)) showError("Embedded voice unavailable. Read the translation on screen.");
+            if (!speakOffline(lastTranslation, conversationTo())) showError("Embedded voice unavailable. Read the translation on screen.");
         });
-        Button add = button("ADD PATIENT STATEMENT", false, () -> {
-            if (!lastStatementAdded) {
-                statements.add(new PatientStatement(lastOriginal, lastTranslation, source));
-                lastStatementAdded = true;
-                showError("Added to the in-memory Handoff Card.");
-            }
-        });
+        if (recordingPatient) {
+            Button add = button("ADD TO HANDOFF · CONFIRM PATIENT WORDS", false, () -> {
+                if (!lastStatementAdded) {
+                    statements.add(new PatientStatement(lastOriginal, lastTranslation, conversationFrom()));
+                    lastStatementAdded = true;
+                    showError("Patient statement added to Handoff.");
+                }
+            });
+        }
         button("VIEW HANDOFF", false, this::showHandoff);
         button("RECORD AGAIN", false, this::showConversation);
     }

@@ -2,6 +2,8 @@
 
 **Follow-up build underway:** The previously reported 73,414,450-byte APK is the stable pre-Whisper build and must be preserved. The new Android source bundles quantized multilingual Whisper via JNI and no longer uses the system recognizer. The original phone feedback found Free Conversation blocked by missing on-device recognition; the new APK still needs a real phone Airplane Mode trial. The detailed measurements below refer to the earlier APK until a new validation section is added.
 
+**Current source checks:** The new arm64 APK build and lint pass; the bundled `ggml-base-q5_1.bin` model and native `libfieldtalk_asr.so` are present in the APK. Six Android JVM tests for explicit EN/ZH/RU extraction pass. Free Conversation now selects Patient → Responder or Responder → Patient, and only confirmed patient statements enter Handoff. ADB still reports no attached device. Do not treat the old APK's reported phone behavior as validation of this new APK.
+
 ## Verified in this workspace
 
 - `:app:assembleDebug` succeeded with Gradle 8.9, Android Gradle Plugin 8.7.3, API 35, and JDK 21. `:app:lintDebug` succeeded after an API compatibility fix. `:app:testDebugUnitTest` reported **NO-SOURCE**; no native JVM unit tests exist yet.
