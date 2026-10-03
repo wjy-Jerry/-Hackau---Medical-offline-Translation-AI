@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import questions from '../../data/emergency_questions.json'
+import { questions } from './phrasePacks'
 
 const languages = { en: 'English', zh: 'Chinese', ru: 'Russian' }
 const answerLabels = {

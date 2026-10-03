@@ -1,5 +1,4 @@
 """Local-only API orchestrating the stable model adapters."""
-import json
 import logging
 import tempfile
 import time
@@ -9,7 +8,8 @@ from pathlib import Path
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from backend.config import ASR_DIR, AUDIO_DIR, LANGUAGES, MODE, ROOT, VOICES, VOICES_DIR
+from backend.config import ASR_DIR, AUDIO_DIR, LANGUAGES, MODE, VOICES, VOICES_DIR
+from backend.phrase_packs import question_rows
 from backend.models.asr import ModelUnavailable, speech_to_text
 from backend.models.translation import translate_and_extract
 from backend.models.tts import text_to_speech
@@ -19,10 +19,7 @@ logger = logging.getLogger("fieldtalk")
 app = FastAPI(title="FieldTalk local API")
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
 ALLOWED_SUFFIXES = {".webm", ".wav", ".ogg", ".mp4", ".m4a"}
-QUESTIONS = {
-    question["id"]: question
-    for question in json.loads((ROOT / "data" / "emergency_questions.json").read_text(encoding="utf-8"))
-}
+QUESTIONS = {question["id"]: question for question in question_rows()}
 
 
 @app.get("/health")

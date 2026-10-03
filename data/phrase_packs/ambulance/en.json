@@ -1,0 +1,13 @@
+{
+  "language": "en",
+  "review_status": "source_text_pending_team_review",
+  "questions": {
+    "pain": "Where does it hurt?",
+    "breathing": "Can you breathe normally?",
+    "allergy": "Are you allergic to any medication?",
+    "medication": "Are you taking any medication?",
+    "consciousness": "Did you lose consciousness?",
+    "bleeding": "Are you bleeding?",
+    "chest_pain": "Do you have chest pain?"
+  }
+}

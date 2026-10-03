@@ -4,11 +4,13 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
-- Latest successful application commit before final validation: `475d2b975aa0143f7ff3698b76fc9891c0734676`
-- Latest successful commit after resuming: run `& 'C:\Program Files\Git\cmd\git.exe' rev-parse HEAD` (the commit containing this checkpoint is the latest stable milestone).
-- Current phase: Phase 2 technical validation complete. Remaining work requires manual hardware, physical offline, and native-speaker checks.
+- Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
+- Current phase: new 12-phase autonomous plan, Phase 1 complete; Phase 2 is next.
 
 ## Completed tasks
+
+- New plan Phase 0: verified clean personal-fork branch, 101 passed/2 skipped tests, and frontend production build.
+- New plan Phase 1: modular local ambulance phrase pack now drives frontend and backend Quick Questions. Seven EN/ZH/RU phrases retain their prior wording and API. Russian is explicitly pending native-speaker validation; EN/ZH team review has not been claimed. See `docs/PHRASE_REVIEW.md`. Checks: 103 passed/2 skipped and frontend build passed.
 
 - The emergency frontend redesign and its audio cache fix are committed and pushed.
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
@@ -28,7 +30,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 ## Unfinished task and exact next action
 
-No automated phase remains after the final validation commit. The exact next action for the team is: start the two local servers using the commands below, have the Russian teammate review the seven question phrases and six test records, use a real microphone in the intended setting, and repeat one round trip plus Quick Questions in physical Airplane Mode. Record any errors in a new issue or follow-up commit. Do not change human-review fields without an actual reviewer.
+Start Phase 2 of the user's new 12-phase plan: add clear fail-safe states for unclear speech, processing, translation failure, audio unavailable, unsupported language, and no audio captured. Preserve translated text on TTS failure and do not invent emergency facts. Run relevant tests, commit `feat: add fail-safe emergency communication states`, and push only `origin backup/codex-full-stack`. Then continue in strict phase order. Human review and physical Airplane Mode checks remain pending.
 
 ## Continue commands (PowerShell)
 

@@ -1,0 +1,13 @@
+{
+  "language": "zh",
+  "review_status": "pending_team_review",
+  "questions": {
+    "pain": "哪里疼？",
+    "breathing": "你能正常呼吸吗？",
+    "allergy": "你对药物过敏吗？",
+    "medication": "你正在服用药物吗？",
+    "consciousness": "你失去过意识吗？",
+    "bleeding": "你在流血吗？",
+    "chest_pain": "你胸口疼吗？"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "pack_id": "ambulance_emergency",
+  "version": 1,
+  "description": "Critical questions for conscious patients during emergency transport",
+  "languages": ["en", "zh", "ru"],
+  "question_order": ["pain", "breathing", "allergy", "medication", "consciousness", "bleeding", "chest_pain"],
+  "review_note": "Phrase text is stored locally. No clinical validation is claimed. Russian wording is pending native-speaker validation."
+}

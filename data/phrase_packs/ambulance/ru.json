@@ -1,0 +1,14 @@
+{
+  "language": "ru",
+  "review_status": "pending_native_speaker_validation",
+  "review_label": "Pending native-speaker validation",
+  "questions": {
+    "pain": "Где у вас болит?",
+    "breathing": "Вы можете нормально дышать?",
+    "allergy": "У вас есть аллергия на какие-либо лекарства?",
+    "medication": "Вы принимаете какие-либо лекарства?",
+    "consciousness": "Вы теряли сознание?",
+    "bleeding": "У вас идёт кровь?",
+    "chest_pain": "У вас болит грудь?"
+  }
+}
