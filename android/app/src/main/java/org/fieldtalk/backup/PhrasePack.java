@@ -3,6 +3,7 @@ package org.fieldtalk.backup;
 import android.content.res.AssetManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -37,7 +38,11 @@ final class PhrasePack {
 
     private static JSONObject read(AssetManager assets, String path) throws Exception {
         try (InputStream input = assets.open(path)) {
-            return new JSONObject(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            return new JSONObject(new String(output.toByteArray(), StandardCharsets.UTF_8));
         }
     }
 }

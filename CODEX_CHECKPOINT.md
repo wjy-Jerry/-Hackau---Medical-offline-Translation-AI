@@ -5,7 +5,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
 - Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
-- Current phase: new 12-phase autonomous plan, Phase 9 native source milestone complete; Phase 10 build/toolchain is next.
+- Current phase: new 12-phase autonomous plan, Phase 10 debug APK build complete; Phase 11 validation is next.
 
 ## Completed tasks
 
@@ -19,6 +19,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - New plan Phase 7: `docs/PITCH_POSITIONING.md` describes the ambulance MVP, verified prototype boundaries, comparative positioning without named-competitor claims, and candidate future domain packs. No app code changed.
 - New plan Phase 8: `docs/ANDROID_ARCHITECTURE.md` compares the desktop pipeline with a standalone native Android app, documents measured desktop model sizes, candidate on-device recognizer/ML Kit translation/embedded TTS, conditional offline capability, build requirements, and risks using official sources. No Android code or SDK has been installed yet.
 - New plan Phase 9 source milestone: separate native Android Java/Gradle project includes shared ambulance phrase assets, 21 pre-generated local Piper WAVs (1.4 MB total), home/Quick Questions/Yes-No/in-memory Handoff. Free Conversation only uses `createOnDeviceSpeechRecognizer`, already-downloaded ML Kit models, and a non-network embedded TTS voice; model provisioning is an explicit connected setup. It reports missing capabilities and keeps text visible. Android structured extraction is intentionally unavailable; no facts are invented. **Android source has not yet compiled because SDK/Gradle are absent.** Tests before commit: 118 Python passed/2 skipped, 3 frontend passed, frontend build passed. This commit is a recoverable source milestone, not an APK validation.
+- New plan Phase 10: official Android command-line tools SHA-256 verified, API 35/build-tools/adb installed under projectless `work/android-sdk`; official Gradle 8.9 SHA-256 verified under `work/gradle-dist`. The Gradle wrapper JAR checksum also matched Gradle's published checksum. Debug APK compiled and Android lint passed after replacing an API-33-only read call. `:app:testDebugUnitTest` had NO-SOURCE; Python Android asset tests passed in the 118-test run. APK is 73,414,450 bytes at repo `dist/FieldTalk-debug.apk` and projectless `outputs/FieldTalk-debug.apk`, SHA-256 `C5FF203D07ED142B484D3A167B68E45702584FBCD69EDEB7DA97A02436FCB5AF`. Signature verification passed with APK v2; archive contains 4 phrase JSON and 21 WAV assets. No emulator or physical phone verification yet.
 
 - The emergency frontend redesign and its audio cache fix are committed and pushed.
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
@@ -38,7 +39,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 ## Unfinished task and exact next action
 
-Start Phase 10: install the official Android command-line SDK/build tools and Gradle wrapper outside Git, then compile the native project, fix any build issues, run available checks, and produce a debug APK in `dist/FieldTalk-debug.apk` plus the projectless `outputs` folder. If dependency/tool download fails, do not retry indefinitely; update this checkpoint with exact blocker and stop safely. Android emulator/physical validation is still pending. Human review, real microphone, and physical Airplane Mode checks remain pending.
+Start Phase 11: inspect `adb devices` and available emulator images; validate APK metadata, local assets, install/launch/navigation if a device exists. Distinguish build validation from physical/emulator results. Then Phase 12 final full-project validation without adding features. Do not claim Android Free Conversation was exercised on a phone. Human review, real microphone, and physical Airplane Mode checks remain pending.
 
 ## Continue commands (PowerShell)
 
@@ -60,16 +61,28 @@ Do not rerun successful tests unless subsequent changes require them. Do not red
 & 'C:\Program Files\Git\cmd\git.exe' push origin backup/codex-full-stack
 ```
 
+Android build/validation setup from the repo root:
+
+```powershell
+$env:JAVA_HOME='D:\java'
+$env:ANDROID_HOME='C:\Users\19573\Documents\Codex\2026-10-02\https-github-com-rrrrrrl-hackau-medical\work\android-sdk'
+$env:GRADLE_USER_HOME='C:\Users\19573\Documents\Codex\2026-10-02\https-github-com-rrrrrrl-hackau-medical\work\gradle-cache'
+$env:PATH='C:\Windows\System32;D:\java\bin;' + $env:PATH
+& "$env:ANDROID_HOME\platform-tools\adb.exe" devices
+& 'C:\Users\19573\Documents\Codex\2026-10-02\https-github-com-rrrrrrl-hackau-medical\work\gradle-dist\gradle-8.9\bin\gradle.bat' -p .\android :app:assembleDebug :app:lintDebug --no-daemon --console=plain
+```
+
 ## Known errors and blockers
 
 - Russian speech evaluation used Piper synthetic audio only; real native-speaker speech quality has not been measured.
-- EN→RU model translated “Are you bleeding?” as wording closer to “Do you have blood?” in one check. Use provisional reviewed phrase-pack wording for Quick Questions and flag free-response Russian for human confirmation.
+- EN→RU model translated “Are you bleeding?” as wording closer to “Do you have blood?” in one check. Use the local phrase-pack wording for Quick Questions and flag free-response Russian for human confirmation. The phrase pack has not been marked human-reviewed.
 - RU→ZH pivot produced repeated wording for one bleeding phrase. Treat RU↔ZH as experimental until native-speaker review.
 - Chinese synthetic ASR changed “胸口疼” into variants including “胸口有疼” and “胸口偶疼”; the extractor has targeted coverage, but further speech variations can still be missed. The original and translation remain visible for confirmation.
 - Offline architecture was verified with non-loopback socket denial. **Physical Airplane Mode has not been tested.**
 - Git's global URL rewrite breaks GitHub access in this environment; use `$env:GIT_CONFIG_GLOBAL='NUL'` for all Git commands.
 - Git author identity is not configured in this environment. For a commit, use the prior commit identity as one-command options: `-c user.name='Jerry Wang' -c user.email='72400309@cityu-dg.edu.cn'`.
 - Two optional real-ASR fixture tests were skipped because `FIELDTALK_ASR_TEST_AUDIO_DIR` was not set. The separate real EN/ZH pipeline request passed.
+- Android Free Conversation requires device on-device ASR, a connected one-time ML Kit model setup, and an embedded target-language voice. None of those device capabilities have been measured here; the APK's bundled phrase workflows are the guaranteed offline portion. Android structured extraction is unavailable, so Handoff records original/translation only.
 
 ## Services and processes to restart
 
