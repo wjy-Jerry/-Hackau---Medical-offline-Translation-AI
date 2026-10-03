@@ -12,6 +12,7 @@ const informationLabels = {
   allergy: 'Allergy', medication: 'Medication', symptom: 'Pain location',
   breathing_difficulty: 'Breathing difficulty', bleeding: 'Bleeding',
   loss_of_consciousness: 'Loss of consciousness',
+  other_symptom: 'Other stated symptom',
 }
 const yesNoQuestions = questions.filter((question) => question.id !== 'pain')
 

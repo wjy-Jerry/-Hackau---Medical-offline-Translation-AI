@@ -24,6 +24,12 @@ from backend.models.emergency_nlp import extract_key_information
         ("我无法正常呼吸。", {"breathing_difficulty": "Difficulty breathing"}),
         ("我在流血。", {"bleeding": "Bleeding"}),
         ("我晕倒了。", {"loss_of_consciousness": "Reported fainting or loss of consciousness"}),
+        ("I feel dizzy.", {"other_symptom": "Dizziness"}),
+        ("I am nauseous.", {"other_symptom": "Nausea"}),
+        ("I have a fever.", {"other_symptom": "Fever"}),
+        ("我头晕。", {"other_symptom": "Dizziness"}),
+        ("我觉得恶心。", {"other_symptom": "Nausea"}),
+        ("我发烧。", {"other_symptom": "Fever"}),
     ],
 )
 def test_explicit_patient_statements(text, expected):
@@ -54,6 +60,12 @@ def test_explicit_patient_statements(text, expected):
         "我差点晕倒了。",
         "你对青霉素过敏吗？",
         "如果我晕倒了怎么办？",
+        "I am not dizzy.",
+        "I don't feel dizzy.",
+        "My mother is nauseous.",
+        "I might have a fever.",
+        "我不头晕。",
+        "我没发烧。",
     ],
 )
 def test_unstated_negated_or_other_person_information_is_empty(text):
@@ -63,4 +75,10 @@ def test_unstated_negated_or_other_person_information_is_empty(text):
 def test_negated_item_does_not_hide_a_separate_positive_statement():
     assert extract_key_information("I am not allergic to penicillin, but my chest hurts.") == {
         "symptom": "Chest pain"
+    }
+
+
+def test_multiple_explicit_symptoms_are_kept_without_inference():
+    assert extract_key_information("My chest hurts and I feel dizzy. I am bleeding.") == {
+        "symptom": "Chest pain", "other_symptom": "Dizziness", "bleeding": "Bleeding"
     }

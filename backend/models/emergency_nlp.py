@@ -63,6 +63,16 @@ _BLEEDING_EN = re.compile(r"\bbleed(?:ing|s)?\b", re.IGNORECASE)
 _BLEEDING_ZH = re.compile(r"流血|出血")
 _FAINTING_EN = re.compile(r"\b(?:fainted|passed out|blacked out|lost consciousness)\b", re.IGNORECASE)
 _FAINTING_ZH = re.compile(r"晕倒|暈倒|昏倒|失去意识|失去意識|昏过去|昏過去")
+_OTHER_SYMPTOMS_EN = (
+    (re.compile(r"\bi\s+(?:feel|am)\s+(?:very\s+)?dizzy\b", re.IGNORECASE), "Dizziness"),
+    (re.compile(r"\bi\s+(?:feel|am)\s+(?:very\s+)?nauseous\b", re.IGNORECASE), "Nausea"),
+    (re.compile(r"\bi\s+(?:have|have got)\s+(?:a\s+)?fever\b", re.IGNORECASE), "Fever"),
+)
+_OTHER_SYMPTOMS_ZH = (
+    (re.compile(r"我(?:感到|感觉|覺得|觉得|很|有点|有點)?头晕|我(?:感到|感觉|覺得|觉得|很|有点|有點)?頭暈"), "Dizziness"),
+    (re.compile(r"我(?:感到|感觉|覺得|觉得|很|有点|有點)?恶心|我(?:感到|感觉|覺得|觉得|很|有点|有點)?噁心"), "Nausea"),
+    (re.compile(r"我(?:在|正)?发烧|我(?:在|正)?發燒"), "Fever"),
+)
 
 
 def _negated_before(clause: str, start: int) -> bool:
@@ -125,4 +135,9 @@ def extract_key_information(text: str) -> dict:
             match = _FAINTING_EN.search(clause) or _FAINTING_ZH.search(clause)
             if match and not _negated_before(clause, match.start()):
                 _add(result, "loss_of_consciousness", "Reported fainting or loss of consciousness")
+
+            for pattern, label in _OTHER_SYMPTOMS_EN + _OTHER_SYMPTOMS_ZH:
+                match = pattern.search(clause)
+                if match and not _negated_before(clause, match.start()):
+                    _add(result, "other_symptom", label)
     return result

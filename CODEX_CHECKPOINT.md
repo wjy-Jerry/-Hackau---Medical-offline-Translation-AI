@@ -5,13 +5,14 @@ Updated: 2026-10-03 (Asia/Shanghai)
 - Current branch: `backup/codex-full-stack`
 - Origin: `https://github.com/wjy-Jerry/-Hackau---Medical-offline-Translation-AI.git`
 - Latest successful commit: the commit containing this checkpoint; run `git rev-parse HEAD` for its hash.
-- Current phase: new 12-phase autonomous plan, Phase 2 complete; Phase 3 is next.
+- Current phase: new 12-phase autonomous plan, Phase 3 complete; Phase 4 is next.
 
 ## Completed tasks
 
 - New plan Phase 0: verified clean personal-fork branch, 101 passed/2 skipped tests, and frontend production build.
 - New plan Phase 1: modular local ambulance phrase pack now drives frontend and backend Quick Questions. Seven EN/ZH/RU phrases retain their prior wording and API. Russian is explicitly pending native-speaker validation; EN/ZH team review has not been claimed. See `docs/PHRASE_REVIEW.md`. Checks: 103 passed/2 skipped and frontend build passed.
 - New plan Phase 2: frontend now names unclear speech, missing audio, unavailable translation, unsupported pairs, and missing local backend with a safe next action. TTS failure leaves translated text visible. Processing shows one honest status instead of timed pseudo-stages. Checks: 1 frontend unit test, 52 relevant API tests, and frontend build passed.
+- New plan Phase 3: conservative English/Chinese extraction now highlights explicitly stated dizziness, nausea, and fever as `other_symptom`, in addition to the existing six target fields. Added positive, negated, and combined-statement cases. Checks: 102 relevant Python tests, 1 frontend unit test, and frontend build passed. Russian extraction is still limited; no inferred fields are inserted.
 
 - The emergency frontend redesign and its audio cache fix are committed and pushed.
 - Phase 0: 66 tests passed, 2 skipped; frontend production build passed; `/health` returned ready for the installed EN/ZH ASR, translation, and TTS components.
@@ -31,7 +32,7 @@ Updated: 2026-10-03 (Asia/Shanghai)
 
 ## Unfinished task and exact next action
 
-Start Phase 3 of the user's new 12-phase plan: improve critical information extraction for explicitly stated allergy, medication, pain location, breathing difficulty, bleeding, loss of consciousness, and other stated symptom. Do not infer diagnoses, treatments, or missing facts. Add tests, commit `feat: improve emergency critical information extraction`, and push only `origin backup/codex-full-stack`. Then continue in strict phase order. Human review and physical Airplane Mode checks remain pending.
+Start Phase 4 of the user's new 12-phase plan: add an in-memory Emergency Handoff Card containing only patient-stated information, Unknown / Not stated for missing fields, clear/reset, and a View Handoff action. Add tests, commit `feat: add emergency handoff card`, and push only `origin backup/codex-full-stack`. Then continue in strict phase order. Human review and physical Airplane Mode checks remain pending.
 
 ## Continue commands (PowerShell)
 
